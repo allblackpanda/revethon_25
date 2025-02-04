@@ -10,31 +10,6 @@ import webbrowser
 import re
 from io import BytesIO
 
-#Global example rate table
-EXAMPLE_RATE_TABLE = [{
-    "effectiveFrom": "",
-    "series": "NewSeries",
-    "version": "1",
-    "items": [
-        {
-            "name": "Intermediate",
-            "version": "1.0",
-            "rate": 7.0},
-        {
-            "name": "Basic",
-            "version": "1.0",
-            "rate": 5.0
-        },
-        {
-            "name": "Advanced",
-            "version": "1.0",
-            "rate": 10.0
-        }
-    ]
-}]
-
-
-
 def read_config():
     config = {}
     with open("config.txt", "r") as file:
@@ -57,30 +32,7 @@ def convert_date_to_epoch(date_str, date_format='%Y-%m-%d %H:%M:%S'):
         return epoch_ms
     except ValueError:
         return "Invalid Date Format"
-
-# Filter out historic tables and only return the latest versions active and any future tables
-def filter_series(input_series):
-    current_epoch = int(time.time()) * 1000
-    latest_versions = {}
-    total_series = []
-    for item in input_series:
-        item_series = item.get("series", "")
-        item_version = float(item.get("version", 0))
-        effective_from = item.get("effectiveFrom", 0) if item.get("effectiveFrom") else 0
-
-        if convert_date_to_epoch(effective_from) >= current_epoch:
-            total_series.append(item) 
-        elif item_series not in latest_versions or float(item_version) > float(latest_versions[item_series]["version"]):
-            latest_versions[item_series] = item               
-        
-    total_series.extend(latest_versions.values())
-
-    #Sort the list again
-    def return_key_value(array):
-        return array['series'] 
-    total_series.sort(key=return_key_value, reverse=True)
-    return total_series
-
+    
 def get_rate_tables():
     if env_var.get() == "-uat":
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
@@ -96,7 +48,28 @@ def get_rate_tables():
         data = response.json()
         if not data:  # Check if the data is empty
             messagebox.showinfo("Info", "No Rate Tables Exist, loading an example Rate Table")
-            data = EXAMPLE_RATE_TABLE
+            data = [{
+                "effectiveFrom": "",
+                "series": "NewSeries",
+                "version": "1",
+                "items": [
+                    {
+                        "name": "Intermediate",
+                        "version": "1.0",
+                        "rate": 7.0
+                    },
+                    {
+                        "name": "Basic",
+                        "version": "1.0",
+                        "rate": 5.0
+                    },
+                    {
+                        "name": "Advanced",
+                        "version": "1.0",
+                        "rate": 10.0
+                    }
+                ]
+            }]
         if isinstance(data, list):
             data.sort(key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
 
@@ -126,10 +99,6 @@ def get_rate_tables():
 
             series_var = tk.StringVar(series_window)
             sorted_series = sorted(data, key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
-            
-            # if selected, filter list
-            if filter_var.get():
-                sorted_series = filter_series(sorted_series)
             series_options = [f"{item.get('series', '')} - v{item.get('version', 'N/A')}" for item in sorted_series]
 
             if series_options:
@@ -166,26 +135,6 @@ def get_rate_tables():
                     series_text_area.delete("1.0", "end")
                     series_text_area.insert("1.0", formatted_output)
                     series_text_area.config(state="disabled")
-
-
-            
-
-            # Update Menu Dropdown widget for series
-            def update_options(options_data):
-                series_var.set('')
-                menu = series_option['menu']
-                menu.delete(0, 'end')
-
-                if filter_var.get():
-                    filtered_options = filter_series(options_data)
-                else:
-                    filtered_options = options_data
-                
-                series_options = [f"{item.get('series', '')} - v{item.get('version', 'N/A')}" for item in filtered_options]
-                for option in series_options:
-                    menu.add_command(label=option, command=tk._setit(series_var, option))
-                series_var.set(series_options[0])  # Set default selection
-                show_series()
 
             def copy_to_main():
                 text_data = series_text_area.get("1.0", "end").strip()  # Remove leading whitespace from entire text
@@ -394,91 +343,84 @@ def open_user_guide():
 def open_api_ref():
     webbrowser.open("https://fnoapi-dynamicmonetization.redoc.ly/#operation/getRateTables")
 
+def read_config():
+    config = {}
+    with open("config.txt", "r") as file:
+        for line in file:
+            key, value = line.strip().split(" = ")
+            config[key] = value
+    return config
+
 config = read_config()
 
+# Create the main application window
 root = tk.Tk()
-root.title("Revenera Dynamic Monetization Token Rate Table Editor")
+root.title("Revenera Dynamic Monetization Tool")
 
-# Get the screen width and height
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-
-# Get the window width and height
-window_width = 750
-window_height = 720
-
-# Calculate the x and y coordinates for the window
-x = int((screen_width / 2) - (window_width / 2))
-y = int((screen_height / 2) - (window_height / 2))
-
-# Set the window geometry
+# Set window size and position
+window_width, window_height = 750, 720
+screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
+x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
 
-# Add radio buttons for Production and UAT at the top of the main window
+# Create a Notebook (Tabbed Interface)
+notebook = ttk.Notebook(root)
+notebook.pack(expand=True, fill="both")
 
-env_var = tk.StringVar(value="-uat")  # Set UAT as default
-radio_frame = tk.Frame(root)
-radio_frame.pack(side="top",anchor="nw", pady=40)
-prod_radio = tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production")
-prod_radio.pack(side="left", padx=10)
-uat_radio = tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value="-uat")
-uat_radio.pack(side="left", padx=10)
-#Filter widget
-filter_var = tk.BooleanVar()
-filter_checkbox = tk.Checkbutton(root, text="Show only current and future Rate Tables", variable=filter_var) # command=lambda:update_options(sorted_series))
-filter_checkbox.pack(side="top", anchor="nw", padx=10)
+# Create "Rate Table Generator" tab
+rate_table_tab = ttk.Frame(notebook)
+notebook.add(rate_table_tab, text="Rate Table Generator")
 
-# Fetch and display logo at the top of the main window
+# Create "Customer Entitlements" tab
+customer_entitlements_tab = ttk.Frame(notebook)
+notebook.add(customer_entitlements_tab, text="Customer Entitlements")
+
+# UI Components for "Rate Table Generator" tab
+env_var = tk.StringVar(value="-uat")
+
+# Radio Buttons for Environment Selection
+radio_frame = tk.Frame(rate_table_tab)
+radio_frame.pack(side="top", anchor="nw", pady=30)
+tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value="-uat").pack(side="left", padx=10)
+
+# Fetch and display logo
 logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
-
-
 response = requests.get(logo_url)
 if response.status_code == 200:
-    image_data = Image.open(BytesIO(response.content))
-    image_data = image_data.resize((200, 39), Image.Resampling.LANCZOS)
+    image_data = Image.open(BytesIO(response.content)).resize((200, 39), Image.Resampling.LANCZOS)
     logo_image = ImageTk.PhotoImage(image_data)
-    logo_label = tk.Label(root, image=logo_image)
-    logo_label.place(relx=0.95, y=15, anchor="ne")
+    tk.Label(rate_table_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
 
-sitelabel = ttk.Label(root, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold"))
-sitelabel.place(x=30, y=15)
+# Tenant label
+ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
 
-button_width = 23 # Fixed width for Buttons
+# Buttons for Rate Table Actions
+button_width = 23
+ttk.Button(rate_table_tab, text="Get Existing Rate Tables", command=get_rate_tables, padding=(5, 7), width=button_width).place(x=10, y=120)
+date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=select_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
+date_button.place(x=10, y=170)
+increment_version_button = ttk.Button(rate_table_tab, text="Increment Series Version", command=increment_version, padding=(5, 7), width=button_width, state=tk.DISABLED)
+increment_version_button.place(x=10, y=220)
+post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
+post_site_button.place(x=585, y=170)
 
-rate_table_button = ttk.Button(root, text="Get Existing Rate Tables", command=get_rate_tables, padding=(5, 7), width=button_width)
-rate_table_button.place(x=10, y=275)
-
-date_button = ttk.Button(root, text="Select New Start Date", command=select_date, padding=(5, 7), width=button_width)
-date_button.config(state=tk.DISABLED)
-date_button.place(x=10, y=325)
-
-increment_version_button = ttk.Button(root, text="Increment Series Version", command=increment_version, padding=(5, 7), width=button_width)
-increment_version_button.config(state=tk.DISABLED)
-increment_version_button.place(x=10, y=375)
-
-effective_from_label = tk.Label(root, text="Effective From: ")
-#effective_from_label.pack(padx=5, pady=2)
-
-post_site_button = ttk.Button(root, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width)
-post_site_button.config(state=tk.DISABLED)
-post_site_button.place(x=585, y=325)
-
-main_text_area = Text(root, wrap="word", height=30, width=50)
+# Text Area for Rate Table
+main_text_area = Text(rate_table_tab, wrap="word", height=30, width=50)
 main_text_area.pack()
 
-result_label = tk.Label(root, text="", font=("Arial", 10, "bold"))
-result_label.pack(pady=25)
+# Result Label
+result_label = tk.Label(rate_table_tab, text="", font=("Arial", 10, "bold"))
+result_label.pack(pady=10)
 
-style = ttk.Style()
-style.configure("My.TButton", background = "red")
+# User Guide and API Reference Buttons
+ttk.Button(rate_table_tab, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).place(x=10, y=645)
+ttk.Button(rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=button_width).place(x=220, y=645)
 
-user_guide_button = ttk.Button(root, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30)
-user_guide_button.place(x=10, y=675)  # Position it at the bottom-left
+# Exit Button
+ttk.Button(rate_table_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=650, y=645)
 
-user_guide_button = ttk.Button(root, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=button_width)
-user_guide_button.place(x=220, y=675)  # Position it at the bottom-left
-
-exit_button = ttk.Button(root, text="Exit", command=root.quit, padding=(5, 5))
-exit_button.place(x=650, y=675)
+# Customer Entitlements Tab - Placeholder for Future Development
+ttk.Label(customer_entitlements_tab, text="Customer Entitlements Features Coming Soon!", font=("Arial", 12, "bold")).pack(pady=50)
 
 root.mainloop()
