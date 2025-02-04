@@ -7,6 +7,7 @@ import requests
 import json
 import datetime
 import webbrowser
+import re
 from io import BytesIO
 
 def read_config():
@@ -71,9 +72,14 @@ def get_rate_tables():
             }]
         if isinstance(data, list):
             data.sort(key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
+
+            # Change epoch dates to Standard Date/Time
             for rate_table in data:
                 if 'effectiveFrom' in rate_table and rate_table['effectiveFrom']:
                     rate_table['effectiveFrom'] = convert_epoch_to_date(rate_table['effectiveFrom'])
+                if 'created' in rate_table and rate_table['created']:
+                    rate_table['created'] = convert_epoch_to_date(rate_table['created'])
+
         with open("rate_tables.json", "w") as file:
             json.dump(data, file, indent=4)
     else:
@@ -84,8 +90,8 @@ def get_rate_tables():
             data = json.load(file)
             series_window = Toplevel(root)
             series_window.title("Existing Rate Tables")
-            window_width = 420  # Adjust as necessary
-            window_height = 600  # Adjust as necessary
+            window_width = 520  # Adjust as necessary
+            window_height = 550  # Adjust as necessary
             series_window.geometry(f"{window_width}x{window_height}+{x+170}+{y+60}")
 
             series_label = tk.Label(series_window, text="Select a Rate Table Series and Version:", padx=0, pady=5)
@@ -108,36 +114,47 @@ def get_rate_tables():
                 selected_series_version = series_var.get()
                 selected_series, selected_version = selected_series_version.split(" - v")
                 series_data = [item for item in sorted_series if item.get('series', '') == selected_series and str(item.get('version', 'N/A')) == selected_version]
-                series_text_area.config(state="normal")
-                series_text_area.delete("1.0", "end")
-                series_text_area.insert("1.0", json.dumps(series_data, indent=4))
-                series_text_area.config(state="disabled")
+                
+                if series_data:
+                    series_info = series_data[0]
+                    formatted_output = (
+                        f"Series Name:\t\t{series_info.get('series', '')}\n"
+                        f"Series Version:\t\t{series_info.get('version', '')}\n\n"
+                        f"   Start Date:\t\t{series_info.get('effectiveFrom', '')}\n"
+                        f" Created Date:\t\t{series_info.get('created', '')}\n\n"
+                        f"{'Item Name'}\t\t\t{'Version'}\t\t{'Rate'}\n"
+                        f"{'-'*45}\n"
+                    )
+                    
+                    for item in series_info.get("items", []):
+                        formatted_output += (
+                            f"{item.get('name', '')}\t\t\t{item.get('version', '')}\t\t{str(item.get('rate', ''))}\n"
+                        )
+                    
+                    series_text_area.config(state="normal")
+                    series_text_area.delete("1.0", "end")
+                    series_text_area.insert("1.0", formatted_output)
+                    series_text_area.config(state="disabled")
 
             def copy_to_main():
-                text_data = series_text_area.get("1.0", "end").strip()
-                if text_data.startswith("[") and text_data.endswith("]"):
-                    text_data = text_data[1:-1].strip()
-                text_data = "\n".join([line for line in text_data.split("\n") if "\"created\"" not in line])
-                text_data = text_data.rstrip()  # Ensure no whitespace before the last "}"
+                text_data = series_text_area.get("1.0", "end").strip()  # Remove leading whitespace from entire text
+
+                # Remove lines starting with "Created Date" (ignoring leading whitespace)
+                text_data = "\n".join(
+                    line for line in text_data.splitlines() 
+                    if not re.match(r"^\s*Created Date", line) and "------" not in line
+                )
+
                 main_text_area.config(state="normal")
                 main_text_area.delete("1.0", "end")
                 main_text_area.insert("1.0", text_data)
-                main_text_area.config(state="normal")
+                
                 result_label.config(text="Rate table successfully copied")
                 date_button.config(state=tk.ACTIVE)
                 post_site_button.config(state=tk.ACTIVE)
                 increment_version_button.config(state=tk.ACTIVE)
-                series_window.destroy()
                 
-                # Extract effectiveFrom and display converted date
-                try:
-                    series_data = json.loads(text_data)
-                    if isinstance(series_data, dict) and "effectiveFrom" in series_data:
-                        formatted_date = convert_epoch_to_date(series_data["effectiveFrom"])
-                        result_label.config(text=f"Displayed Rate Table Effective From Date:  {formatted_date}")
-
-                except json.JSONDecodeError:
-                    messagebox.showerror("Error", "Invalid JSON format in the text area.")
+                series_window.destroy()
 
             def delete_rate_table():
                 selected_series_version = series_var.get()
@@ -188,22 +205,23 @@ def select_date():
         )
         formatted_date = selected_datetime.strftime('%Y-%m-%d %H:%M:%S')
 
-        # Update effectiveFrom in the currently displayed series
+        # Update Start Date in the currently displayed text
         text_data = main_text_area.get("1.0", "end").strip()
-        if text_data:
-            try:
-                series_data = json.loads(text_data)
-                if isinstance(series_data, dict) and "effectiveFrom" in series_data:
-                    series_data["effectiveFrom"] = formatted_date
-                updated_text = json.dumps(series_data, indent=4)
-                main_text_area.config(state="normal")
-                main_text_area.delete("1.0", "end")
-                main_text_area.insert("1.0", updated_text)
-                main_text_area.config(state="normal")
-                result_label.config(text="Start Date updated Successfully")
-
-            except json.JSONDecodeError:
-                messagebox.showerror("Error", "Failed to update effectiveFrom Start Date in the displayed series.")
+        if "Start Date:" in text_data:
+            updated_text = ""
+            for line in text_data.split("\n"):
+                if line.lstrip().startswith("Start Date:"):
+                    leading_spaces = len(line) - len(line.lstrip())
+                    updated_text += " " * leading_spaces + f"Start Date: \t{formatted_date}\n"
+                else:
+                    updated_text += line + "\n"
+            
+            main_text_area.config(state="normal")
+            main_text_area.delete("1.0", "end")
+            main_text_area.insert("1.0", updated_text)
+            result_label.config(text="Start Date updated Successfully")
+            main_text_area.config(state="normal")
+        
         top.destroy()
 
     top = tk.Toplevel(root)
@@ -237,48 +255,119 @@ def select_date():
 
     tk.Button(top, text="Update Rate Table Start Date", command=ok).pack(pady=10)
 
-
 def increment_version():
-    """Increments the version of the first 'version' field found in the main text area."""
+    """Increments the value of 'Series Version' in the main text UI."""
     text_data = main_text_area.get("1.0", "end").strip()
     
     if not text_data:
         messagebox.showerror("Error", "No data available to increment version.")
         return
 
-    try:
-        series_data = json.loads(text_data)
-
-        if isinstance(series_data, dict) and "version" in series_data:
-            series_data["version"] = str(int(series_data["version"]) + 1)  # Increment version
-        elif isinstance(series_data, list) and series_data:
-            for item in series_data:
-                if "version" in item:
-                    item["version"] = str(int(item["version"]) + 1)  # Increment version of first occurrence
-                    break  # Stop after first modification
-
-        updated_text = json.dumps(series_data, indent=4)
-        main_text_area.config(state="normal")
-        main_text_area.delete("1.0", "end")
-        main_text_area.insert("1.0", updated_text)
-        main_text_area.config(state="normal")
-
-        result_label.config(text="Series Version incremented successfully")
-
-    except (json.JSONDecodeError, ValueError):
-        messagebox.showerror("Error", "Failed to increment version. Ensure valid JSON structure.")
+    updated_text = ""
+    for line in text_data.split("\n"):
+        if line.lstrip().startswith("Series Version:"):
+            leading_spaces = len(line) - len(line.lstrip())
+            version_number = int(line.split("\t")[-1]) + 1 if line.split("\t")[-1].isdigit() else 1
+            updated_text += " " * leading_spaces + f"Series Version:\t{version_number}\n"
+        else:
+            updated_text += line + "\n"
+    
+    main_text_area.config(state="normal")
+    main_text_area.delete("1.0", "end")
+    main_text_area.insert("1.0", updated_text.strip())
+    main_text_area.config(state="normal")
+    result_label.config(text="Series Version incremented successfully")
 
 def post_to_site():
-    """Posts the current contents of the Main UI to the configured site."""
+    """Posts the current contents of the Main UI to the configured site and writes it to a file."""
+    text_data = main_text_area.get("1.0", "end").strip()
+
+    if not text_data:
+        messagebox.showerror("Error", "No data to post.")
+        return
+    
+    try:
+        lines = text_data.split("\n")
+        rate_table = {"items": []}
+        processing_items = False  # Flag to track when to process item lines
+
+        for line in lines:
+            line = line.strip()
+
+            # Identify metadata before processing items
+            if line.startswith("Series Name:"):
+                rate_table["series"] = line.split("\t")[-1].strip()
+            elif line.startswith("Series Version:"):
+                rate_table["version"] = line.split("\t")[-1].strip()
+            elif line.startswith("Start Date:"):
+                rate_table["effectiveFrom"] = convert_date_to_epoch(line.split("\t")[-1].strip())
+            elif line.startswith("Item Name"):
+                processing_items = True  # Begin processing items after this line
+                continue  # Skip the header line itself
+            
+            # Process items after "Item Name"
+            if processing_items and line and "\t" in line:
+                parts = re.split(r'\t+', line)  # Handle multiple tab spaces
+                if len(parts) >= 3:
+                    rate_table["items"].append({
+                        "name": parts[0].strip(),
+                        "version": parts[1].strip(),
+                        "rate": float(parts[2].strip())
+                    })
+
+        # Write to JSON file  Enable for debug only
+        #with open("new_rate_table.json", "w") as json_file:
+            #json.dump(rate_table, json_file, indent=4)
+
+        # Determine API endpoint
+        base_url = f"https://{config['site']}-uat" if env_var.get() == "-uat" else f"https://{config['site']}"
+        api_url = f"{base_url}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
+
+        headers = {
+            "Authorization": f"Bearer {config['jwt']}",
+            "Content-Type": "application/json"
+        }
+        response = requests.post(api_url, headers=headers, json=rate_table)
+
+        if response.status_code in [200, 201]:
+            messagebox.showinfo("Success", "Rate Table posted successfully")
+        else:
+            messagebox.showerror("Error", f"Failed to post Rate Table: {response.status_code}\n{response.text}")
+
+    except Exception as e:
+        pass
+        #messagebox.showerror("Error", f"Failed to process data: {str(e)}")
+
+    """Posts the current contents of the Main UI to the configured site and writes it to a file."""
     text_data = main_text_area.get("1.0", "end").strip()
     if not text_data:
         messagebox.showerror("Error", "No data to post.")
         return
+    
     try:
-        series_data = json.loads(text_data)
-
-        if isinstance(series_data, dict) and "effectiveFrom" in series_data:
-            series_data["effectiveFrom"] = convert_date_to_epoch(series_data["effectiveFrom"])
+        lines = text_data.split("\n")
+        rate_table = {"items": []}
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith("Start Date:"):
+                rate_table["effectiveFrom"] = convert_date_to_epoch(line.split("\t")[1])
+            elif line.startswith("Series Name:"):
+                rate_table["series"] = line.split("\t")[1]
+            elif line.startswith("Series Version:"):
+                rate_table["version"] = line.split("\t")[1]
+            elif line and "\t" in line:
+                parts = line.split("\t")
+                if len(parts) >= 3:
+                    rate_table["items"].append({
+                        "name": parts[0].strip(),
+                        "version": parts[1].strip(),
+                        "rate": float(parts[2].strip())
+                    })
+        
+        # Write to file
+        with open("new_rate_table.json", "w") as json_file:
+            json.dump(rate_table, json_file, indent=4)
         
         if env_var.get() == "-uat":
             url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
@@ -289,13 +378,13 @@ def post_to_site():
             "Authorization": f"Bearer {config['jwt']}",
             "Content-Type": "application/json"
         }
-        response = requests.post(url, headers=headers, json=series_data)
+        response = requests.post(url, headers=headers, json=rate_table)
         if response.status_code in [200, 201]:
-            messagebox.showinfo("Success", "Rate Table posted successfully")
+            messagebox.showinfo("Success", "Rate Table posted successfully and saved to new_rate_table.json")
         else:
             messagebox.showerror("Error", f"Failed to post Rate Table: {response.status_code}\n{response.text}")
-    except json.JSONDecodeError:
-        messagebox.showerror("Error", "Invalid JSON format in the text area.")
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to process data: {str(e)}")
 
 def open_user_guide():
     webbrowser.open("https://docs.revenera.com/dm/dynamicmonetization_ug/Content/helplibrary/DMGettingStarted.htm")

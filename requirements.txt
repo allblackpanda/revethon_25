@@ -2,3 +2,4 @@ Pillow
 tkcalendar
 requests
 ttkbootstrap
+re
