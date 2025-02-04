@@ -338,54 +338,6 @@ def post_to_site():
         pass
         #messagebox.showerror("Error", f"Failed to process data: {str(e)}")
 
-    """Posts the current contents of the Main UI to the configured site and writes it to a file."""
-    text_data = main_text_area.get("1.0", "end").strip()
-    if not text_data:
-        messagebox.showerror("Error", "No data to post.")
-        return
-    
-    try:
-        lines = text_data.split("\n")
-        rate_table = {"items": []}
-        
-        for line in lines:
-            line = line.strip()
-            if line.startswith("Start Date:"):
-                rate_table["effectiveFrom"] = convert_date_to_epoch(line.split("\t")[1])
-            elif line.startswith("Series Name:"):
-                rate_table["series"] = line.split("\t")[1]
-            elif line.startswith("Series Version:"):
-                rate_table["version"] = line.split("\t")[1]
-            elif line and "\t" in line:
-                parts = line.split("\t")
-                if len(parts) >= 3:
-                    rate_table["items"].append({
-                        "name": parts[0].strip(),
-                        "version": parts[1].strip(),
-                        "rate": float(parts[2].strip())
-                    })
-        
-        # Write to file
-        with open("new_rate_table.json", "w") as json_file:
-            json.dump(rate_table, json_file, indent=4)
-        
-        if env_var.get() == "-uat":
-            url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
-        else:
-            url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
-
-        headers = {
-            "Authorization": f"Bearer {config['jwt']}",
-            "Content-Type": "application/json"
-        }
-        response = requests.post(url, headers=headers, json=rate_table)
-        if response.status_code in [200, 201]:
-            messagebox.showinfo("Success", "Rate Table posted successfully and saved to new_rate_table.json")
-        else:
-            messagebox.showerror("Error", f"Failed to post Rate Table: {response.status_code}\n{response.text}")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to process data: {str(e)}")
-
 def open_user_guide():
     webbrowser.open("https://docs.revenera.com/dm/dynamicmonetization_ug/Content/helplibrary/DMGettingStarted.htm")
 def open_api_ref():
