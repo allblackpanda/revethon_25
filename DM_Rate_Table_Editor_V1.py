@@ -23,7 +23,15 @@ def convert_epoch_to_date(epoch_ms):
         return datetime.datetime.fromtimestamp(epoch_sec).strftime('%Y-%m-%d %H:%M:%S')
     except ValueError:
         return "Invalid Date"
-
+    
+def convert_date_to_epoch(date_str, date_format='%Y-%m-%d %H:%M:%S'):
+    try:
+        dt = datetime.datetime.strptime(date_str, date_format)
+        epoch_ms = int(dt.timestamp() * 1000)  # Convert seconds to milliseconds
+        return epoch_ms
+    except ValueError:
+        return "Invalid Date Format"
+    
 def get_rate_tables():
     if env_var.get() == "-uat":
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
@@ -63,6 +71,9 @@ def get_rate_tables():
             }]
         if isinstance(data, list):
             data.sort(key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
+            for rate_table in data:
+                if 'effectiveFrom' in rate_table and rate_table['effectiveFrom']:
+                    rate_table['effectiveFrom'] = convert_epoch_to_date(rate_table['effectiveFrom'])
         with open("rate_tables.json", "w") as file:
             json.dump(data, file, indent=4)
     else:
@@ -175,9 +186,7 @@ def select_date():
             selected_date.year, selected_date.month, selected_date.day,
             selected_hour, selected_minute
         )
-        timestamp = int(selected_datetime.timestamp()) * 1000  # Convert to milliseconds
-
-        effective_from_label.config(text=f"Effective From: {timestamp}")
+        formatted_date = selected_datetime.strftime('%Y-%m-%d %H:%M:%S')
 
         # Update effectiveFrom in the currently displayed series
         text_data = main_text_area.get("1.0", "end").strip()
@@ -185,16 +194,13 @@ def select_date():
             try:
                 series_data = json.loads(text_data)
                 if isinstance(series_data, dict) and "effectiveFrom" in series_data:
-                    series_data["effectiveFrom"] = timestamp
+                    series_data["effectiveFrom"] = formatted_date
                 updated_text = json.dumps(series_data, indent=4)
                 main_text_area.config(state="normal")
                 main_text_area.delete("1.0", "end")
                 main_text_area.insert("1.0", updated_text)
                 main_text_area.config(state="normal")
-                
-                # Display the formatted date and time
-                formatted_date = selected_datetime.strftime('%Y-%m-%d %H:%M:%S')
-                result_label.config(text=f"Rate Table Start Date: {formatted_date}")
+                result_label.config(text="Start Date updated Successfully")
 
             except json.JSONDecodeError:
                 messagebox.showerror("Error", "Failed to update effectiveFrom Start Date in the displayed series.")
@@ -271,6 +277,9 @@ def post_to_site():
     try:
         series_data = json.loads(text_data)
 
+        if isinstance(series_data, dict) and "effectiveFrom" in series_data:
+            series_data["effectiveFrom"] = convert_date_to_epoch(series_data["effectiveFrom"])
+        
         if env_var.get() == "-uat":
             url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
         else:
