@@ -10,6 +10,31 @@ import webbrowser
 import re
 from io import BytesIO
 
+#Global example rate table
+EXAMPLE_RATE_TABLE = [{
+    "effectiveFrom": "",
+    "series": "NewSeries",
+    "version": "1",
+    "items": [
+        {
+            "name": "Intermediate",
+            "version": "1.0",
+            "rate": 7.0},
+        {
+            "name": "Basic",
+            "version": "1.0",
+            "rate": 5.0
+        },
+        {
+            "name": "Advanced",
+            "version": "1.0",
+            "rate": 10.0
+        }
+    ]
+}]
+
+
+
 def read_config():
     config = {}
     with open("config.txt", "r") as file:
@@ -71,28 +96,7 @@ def get_rate_tables():
         data = response.json()
         if not data:  # Check if the data is empty
             messagebox.showinfo("Info", "No Rate Tables Exist, loading an example Rate Table")
-            data = [{
-                "effectiveFrom": "",
-                "series": "NewSeries",
-                "version": "1",
-                "items": [
-                    {
-                        "name": "Intermediate",
-                        "version": "1.0",
-                        "rate": 7.0
-                    },
-                    {
-                        "name": "Basic",
-                        "version": "1.0",
-                        "rate": 5.0
-                    },
-                    {
-                        "name": "Advanced",
-                        "version": "1.0",
-                        "rate": 10.0
-                    }
-                ]
-            }]
+            data = EXAMPLE_RATE_TABLE
         if isinstance(data, list):
             data.sort(key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
 
@@ -422,7 +426,7 @@ uat_radio.pack(side="left", padx=10)
 #Filter widget
 filter_var = tk.BooleanVar()
 filter_checkbox = tk.Checkbutton(root, text="Show only current and future Rate Tables", variable=filter_var) # command=lambda:update_options(sorted_series))
-filter_checkbox.pack()
+filter_checkbox.pack(side="top", anchor="nw", padx=10)
 
 # Fetch and display logo at the top of the main window
 logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
