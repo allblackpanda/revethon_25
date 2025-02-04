@@ -32,7 +32,30 @@ def convert_date_to_epoch(date_str, date_format='%Y-%m-%d %H:%M:%S'):
         return epoch_ms
     except ValueError:
         return "Invalid Date Format"
-    
+
+# Filter out historic tables and only return the latest versions active and any future tables
+def filter_series(input_series):
+    current_epoch = int(time.time()) * 1000
+    latest_versions = {}
+    total_series = []
+    for item in input_series:
+        item_series = item.get("series", "")
+        item_version = float(item.get("version", 0))
+        effective_from = item.get("effectiveFrom", 0) if item.get("effectiveFrom") else 0
+
+        if convert_date_to_epoch(effective_from) >= current_epoch:
+            total_series.append(item) 
+        elif item_series not in latest_versions or float(item_version) > float(latest_versions[item_series]["version"]):
+            latest_versions[item_series] = item               
+        
+    total_series.extend(latest_versions.values())
+
+    #Sort the list again
+    def return_key_value(array):
+        return array['series'] 
+    total_series.sort(key=return_key_value, reverse=True)
+    return total_series
+
 def get_rate_tables():
     if env_var.get() == "-uat":
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
@@ -99,6 +122,10 @@ def get_rate_tables():
 
             series_var = tk.StringVar(series_window)
             sorted_series = sorted(data, key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
+            
+            # if selected, filter list
+            if filter_var.get():
+                sorted_series = filter_series(sorted_series)
             series_options = [f"{item.get('series', '')} - v{item.get('version', 'N/A')}" for item in sorted_series]
 
             if series_options:
@@ -135,6 +162,26 @@ def get_rate_tables():
                     series_text_area.delete("1.0", "end")
                     series_text_area.insert("1.0", formatted_output)
                     series_text_area.config(state="disabled")
+
+
+            
+
+            # Update Menu Dropdown widget for series
+            def update_options(options_data):
+                series_var.set('')
+                menu = series_option['menu']
+                menu.delete(0, 'end')
+
+                if filter_var.get():
+                    filtered_options = filter_series(options_data)
+                else:
+                    filtered_options = options_data
+                
+                series_options = [f"{item.get('series', '')} - v{item.get('version', 'N/A')}" for item in filtered_options]
+                for option in series_options:
+                    menu.add_command(label=option, command=tk._setit(series_var, option))
+                series_var.set(series_options[0])  # Set default selection
+                show_series()
 
             def copy_to_main():
                 text_data = series_text_area.get("1.0", "end").strip()  # Remove leading whitespace from entire text
@@ -372,6 +419,10 @@ prod_radio = tk.Radiobutton(radio_frame, text="Production", variable=env_var, va
 prod_radio.pack(side="left", padx=10)
 uat_radio = tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value="-uat")
 uat_radio.pack(side="left", padx=10)
+#Filter widget
+filter_var = tk.BooleanVar()
+filter_checkbox = tk.Checkbutton(root, text="Show only current and future Rate Tables", variable=filter_var) # command=lambda:update_options(sorted_series))
+filter_checkbox.pack()
 
 # Fetch and display logo at the top of the main window
 logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
