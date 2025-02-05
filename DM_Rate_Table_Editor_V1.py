@@ -412,9 +412,24 @@ def read_config():
     return config
 
 config = read_config()
+database_selection = config.get("Database_Selection", "Google_Sheets")  # Default to Google Sheets
 
+# Google Sheets Integration
+def connect_google_sheets():
+    """Connects to Google Sheets using the service account key file."""
+    try:
+        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_name("revethon-2025.json", scope)
+        client = gspread.authorize(creds)
+        return client.open("Revethon-DM-ENT-MGMT").sheet1  # Opens the first sheet
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to connect to Google Sheets: {str(e)}")
+        return None
+
+
+# Register Customer Function
 def register_customer():
-    """Registers a new customer via API and stores the details in an Excel file, checking for duplicate Customer IDs."""
+    """Registers a new customer and saves it to the selected database (Excel or Google Sheets)."""
     
     customer_id = customer_id_entry.get().strip()
     customer_name = customer_name_entry.get().strip()
@@ -423,22 +438,6 @@ def register_customer():
     if not customer_id or not customer_name:
         messagebox.showerror("Error", "Customer ID and Customer Name are required.")
         return
-    
-    file_path = "DM_ENT_MGMT_DB-UAT.xlsx"  # Use the updated .xlsx format
-
-    # Check if the file exists and if the Customer ID already exists
-    if os.path.exists(file_path):
-        try:
-            df = pd.read_excel(file_path, engine="openpyxl")  # Read using openpyxl
-            if customer_id in df["Customer ID"].astype(str).values:
-                messagebox.showwarning("Warning", f"Customer ID '{customer_id}' already exists in the database.")
-                return  # Stop registration if the Customer ID exists
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to read database: {str(e)}")
-            return
-    else:
-        # If the file doesn't exist, create an empty DataFrame
-        df = pd.DataFrame(columns=["Customer ID", "Customer Name", "Elastic Instance ID"])
 
     # Determine API URL
     if env_var.get() == "-uat":
@@ -465,8 +464,11 @@ def register_customer():
 
             messagebox.showinfo("Success", f"Customer registered successfully!\nElastic Instance ID: {elastic_instance_id}")
 
-            # Save the new customer to the Excel file
-            save_to_excel(customer_id, customer_name, elastic_instance_id)
+            # Save data based on configuration
+            if database_selection == "Google_Sheets":
+                save_to_google_sheets(customer_id, customer_name, elastic_instance_id)
+            else:
+                save_to_excel(customer_id, customer_name, elastic_instance_id)
 
         else:
             messagebox.showerror("Error", f"Failed to register customer: {response.status_code}\n{response.text}")
@@ -474,6 +476,18 @@ def register_customer():
     except Exception as e:
         messagebox.showerror("Error", f"Request failed: {str(e)}")
 
+# Save Data to Google Sheets
+def save_to_google_sheets(customer_id, customer_name, elastic_instance_id):
+    """Saves customer registration data to Google Sheets."""
+    sheet = connect_google_sheets()
+    if not sheet:
+        return
+
+    try:
+        sheet.append_row([customer_id, customer_name, elastic_instance_id])
+        messagebox.showinfo("Success", "Customer data saved to Google Sheets (Revethon-DM-ENT-MGMT).")
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to write to Google Sheets: {str(e)}")
 
 def save_to_excel(customer_id, customer_name, elastic_instance_id):
     """Saves the Customer ID, Customer Name, and Elastic Instance ID to an Excel file."""
@@ -535,8 +549,6 @@ if response.status_code == 200:
     image_data = Image.open(BytesIO(response.content)).resize((200, 39), Image.Resampling.LANCZOS)
     logo_image = ImageTk.PhotoImage(image_data)
     tk.Label(rate_table_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
-
-
 
 # Buttons for Rate Table Actions
 button_width = 23
