@@ -2,10 +2,9 @@ Pillow
 tkcalendar
 requests
 ttkbootstrap
-re
 pandas
 openpyxl
 xlrd
 xlwt
 gspread
-oath2client
+oauth2client
