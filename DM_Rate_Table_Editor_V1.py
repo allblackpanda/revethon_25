@@ -81,7 +81,7 @@ def filter_series(input_series):
     total_series.sort(key=return_key_value, reverse=True)
     return total_series 
 
-def get_rate_tables():
+def get_rate_tables(filtered=False):
     if env_var.get() == "-uat":
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
     else:
@@ -94,7 +94,7 @@ def get_rate_tables():
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         data = response.json()
-        if not data:  # Check if the data is empty
+        if not data:
             messagebox.showinfo("Info", "No Rate Tables Exist, loading an example Rate Table")
             data = [{
                 "effectiveFrom": "",
@@ -121,18 +121,22 @@ def get_rate_tables():
         if isinstance(data, list):
             data.sort(key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
 
-            # Change epoch dates to Standard Date/Time
+            # Convert epoch timestamps
             for rate_table in data:
                 if 'effectiveFrom' in rate_table and rate_table['effectiveFrom']:
                     rate_table['effectiveFrom'] = convert_epoch_to_date(rate_table['effectiveFrom'])
                 if 'created' in rate_table and rate_table['created']:
                     rate_table['created'] = convert_epoch_to_date(rate_table['created'])
 
+            # **Apply filtering if button was clicked**
+            if filtered:
+                data = filter_series(data)
+
         with open("rate_tables.json", "w") as file:
             json.dump(data, file, indent=4)
     else:
         messagebox.showerror("Error", f"Failed to retrieve rate tables: {response.status_code}")
-    
+
     try:
         with open("rate_tables.json", "r") as file:
             data = json.load(file)
@@ -436,11 +440,6 @@ radio_frame.pack(side="top", anchor="nw", pady=30)
 tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
 tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value="-uat").pack(side="left", padx=10)
 
-# Filter Checkbox 
-filter_var = tk.BooleanVar()
-filter_checkbox = tk.Checkbutton(rate_table_tab, text="Show only current and future Rate Tables", variable=filter_var) # command=lambda:update_options(sorted_series))
-filter_checkbox.pack(side="top", anchor="nw", padx=10)
-
 # Fetch and display logo
 logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
 response = requests.get(logo_url)
@@ -454,11 +453,16 @@ ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "
 
 # Buttons for Rate Table Actions
 button_width = 23
-ttk.Button(rate_table_tab, text="Get Existing Rate Tables", command=get_rate_tables, padding=(5, 7), width=button_width).place(x=10, y=120)
-date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=select_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
-date_button.place(x=10, y=170)
+
+# Add a new button to fetch filtered rate tables
+filter_var = tk.BooleanVar()
+ttk.Button(rate_table_tab, text="Get All Rate Tables", command=get_rate_tables, padding=(5, 7), width=button_width).place(x=10, y=120)
+ttk.Button(rate_table_tab, text="Get Current/Future Tables", command=lambda: get_rate_tables(filtered=True), padding=(5, 7), width=button_width).place(x=10, y=170)
 increment_version_button = ttk.Button(rate_table_tab, text="Increment Series Version", command=increment_version, padding=(5, 7), width=button_width, state=tk.DISABLED)
 increment_version_button.place(x=10, y=220)
+date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=select_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
+date_button.place(x=10, y=270)
+
 post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
 post_site_button.place(x=585, y=170)
 
