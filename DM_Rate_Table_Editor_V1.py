@@ -411,10 +411,10 @@ config = read_config()
 
 # Create the main application window
 root = tk.Tk()
-root.title("Revenera Dynamic Monetization Tool")
+root.title("Revenera Dynamic Monetization Standalone Tool")
 
 # Set window size and position
-window_width, window_height = 750, 720
+window_width, window_height = 770, 720
 screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
@@ -425,11 +425,11 @@ notebook.pack(expand=True, fill="both")
 
 # Create "Rate Table Generator" tab
 rate_table_tab = ttk.Frame(notebook)
-notebook.add(rate_table_tab, text="Rate Table Generator")
+notebook.add(rate_table_tab, text="Rate Table Generator", padding= 5)
 
 # Create "Customer Entitlements" tab
 customer_entitlements_tab = ttk.Frame(notebook)
-notebook.add(customer_entitlements_tab, text="Customer Entitlements")
+notebook.add(customer_entitlements_tab, text="Customer Entitlement Management", padding= 5)
 
 # UI Components for "Rate Table Generator" tab
 env_var = tk.StringVar(value="-uat")
@@ -464,7 +464,7 @@ date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=s
 date_button.place(x=10, y=270)
 
 post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
-post_site_button.place(x=585, y=170)
+post_site_button.place(x=590, y=170)
 
 # Text Area for Rate Table
 main_text_area = Text(rate_table_tab, wrap="word", height=30, width=50)
@@ -479,7 +479,7 @@ ttk.Button(rate_table_tab, text="Dynamic Monetization User Guide", command=open_
 ttk.Button(rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=button_width).place(x=220, y=645)
 
 # Exit Button
-ttk.Button(rate_table_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=650, y=645)
+ttk.Button(rate_table_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
 
 # Customer Entitlements Tab - Placeholder for Future Development
 ttk.Label(customer_entitlements_tab, text="Customer Entitlements Features Coming Soon!", font=("Arial", 12, "bold")).pack(pady=50)
