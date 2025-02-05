@@ -424,7 +424,7 @@ def register_customer():
         messagebox.showerror("Error", "Customer ID and Customer Name are required.")
         return
     
-    file_path = "DM_ENT_MGMT_DB.xlsx"  # Use the updated .xlsx format
+    file_path = "DM_ENT_MGMT_DB-UAT.xlsx"  # Use the updated .xlsx format
 
     # Check if the file exists and if the Customer ID already exists
     if os.path.exists(file_path):
@@ -478,7 +478,7 @@ def register_customer():
 def save_to_excel(customer_id, customer_name, elastic_instance_id):
     """Saves the Customer ID, Customer Name, and Elastic Instance ID to an Excel file."""
     
-    file_path = "DM_ENT_MGMT_DB.xlsx"
+    file_path = "DM_ENT_MGMT_DB-UAT.xlsx"
 
     # Load or create DataFrame
     if os.path.exists(file_path):
@@ -493,7 +493,7 @@ def save_to_excel(customer_id, customer_name, elastic_instance_id):
     # Save back to Excel
     df.to_excel(file_path, index=False, engine="openpyxl")
 
-    messagebox.showinfo("Success", "Customer data saved to DM_ENT_MGMT_DB.xlsx")
+    messagebox.showinfo("Success", "Customer data saved to DM_ENT_MGMT_DB-UAT.xlsx")
 
 # Create the main application window
 root = tk.Tk()
@@ -525,6 +525,8 @@ radio_frame = tk.Frame(rate_table_tab)
 radio_frame.pack(side="top", anchor="nw", pady=30)
 tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
 tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value="-uat").pack(side="left", padx=10)
+# Tenant label
+ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
 
 # Fetch and display logo
 logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
@@ -534,8 +536,7 @@ if response.status_code == 200:
     logo_image = ImageTk.PhotoImage(image_data)
     tk.Label(rate_table_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
 
-# Tenant label
-ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
+
 
 # Buttons for Rate Table Actions
 button_width = 23
@@ -567,12 +568,23 @@ ttk.Button(rate_table_tab, text="Rate Table API Reference", command=open_api_ref
 # Exit Button
 ttk.Button(rate_table_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
 
-# Customer Entitlements Tab 
-ttk.Label(customer_entitlements_tab, text="New Customer Registration", font=("Arial", 12, "bold")).pack(pady=20)
+# Customer Entitlements Tab
+ttk.Label(customer_entitlements_tab, text="New Customer Registration", font=("Arial", 12, "bold")).place(relx=0.5, y=70, anchor="center")
+
+
+# Tenant label (Upper Left at x=30, y=10)
+ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
+
+# Radio Buttons for Environment Selection (Moved to x=30, y=40, Left Side)
+radio_frame = tk.Frame(customer_entitlements_tab)
+radio_frame.pack(side="top", anchor="nw", pady=30)
+
+tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value="-uat").pack(side="left", padx=10)
 
 # Create a frame for better layout management
 customer_frame = tk.Frame(customer_entitlements_tab)
-customer_frame.pack(pady=15)
+customer_frame.place(x=30, y=120)  # Position below the environment selection
 
 # Customer ID Label and Entry (Left side)
 ttk.Label(customer_frame, text="Customer ID:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
@@ -588,6 +600,7 @@ customer_name_entry.pack(side="left", padx=5)
 register_button = ttk.Button(customer_frame, text="Register Customer", command=register_customer, padding=(5, 7), width=20)
 register_button.pack(side="left", padx=10)
 
+# Exit Button (Bottom Right)
 ttk.Button(customer_entitlements_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
 
 
