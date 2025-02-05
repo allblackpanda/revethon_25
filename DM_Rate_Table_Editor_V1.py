@@ -9,6 +9,10 @@ import datetime
 import webbrowser
 import re
 from io import BytesIO
+import pandas as pd
+import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 #Global example rate table
 EXAMPLE_RATE_TABLE = [{
@@ -409,6 +413,88 @@ def read_config():
 
 config = read_config()
 
+def register_customer():
+    """Registers a new customer via API and stores the details in an Excel file, checking for duplicate Customer IDs."""
+    
+    customer_id = customer_id_entry.get().strip()
+    customer_name = customer_name_entry.get().strip()
+    
+    # Validate inputs
+    if not customer_id or not customer_name:
+        messagebox.showerror("Error", "Customer ID and Customer Name are required.")
+        return
+    
+    file_path = "DM_ENT_MGMT_DB.xlsx"  # Use the updated .xlsx format
+
+    # Check if the file exists and if the Customer ID already exists
+    if os.path.exists(file_path):
+        try:
+            df = pd.read_excel(file_path, engine="openpyxl")  # Read using openpyxl
+            if customer_id in df["Customer ID"].astype(str).values:
+                messagebox.showwarning("Warning", f"Customer ID '{customer_id}' already exists in the database.")
+                return  # Stop registration if the Customer ID exists
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to read database: {str(e)}")
+            return
+    else:
+        # If the file doesn't exist, create an empty DataFrame
+        df = pd.DataFrame(columns=["Customer ID", "Customer Name", "Elastic Instance ID"])
+
+    # Determine API URL
+    if env_var.get() == "-uat":
+        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
+    else:
+        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
+
+    headers = {
+        "Authorization": f"Bearer {config['jwt']}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "shortName": customer_name,
+        "accountId": customer_id
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+
+        if response.status_code in [200, 201]:
+            response_data = response.json()
+            elastic_instance_id = response_data.get("id", "Unknown")
+
+            messagebox.showinfo("Success", f"Customer registered successfully!\nElastic Instance ID: {elastic_instance_id}")
+
+            # Save the new customer to the Excel file
+            save_to_excel(customer_id, customer_name, elastic_instance_id)
+
+        else:
+            messagebox.showerror("Error", f"Failed to register customer: {response.status_code}\n{response.text}")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Request failed: {str(e)}")
+
+
+def save_to_excel(customer_id, customer_name, elastic_instance_id):
+    """Saves the Customer ID, Customer Name, and Elastic Instance ID to an Excel file."""
+    
+    file_path = "DM_ENT_MGMT_DB.xlsx"
+
+    # Load or create DataFrame
+    if os.path.exists(file_path):
+        df = pd.read_excel(file_path, engine="openpyxl")
+    else:
+        df = pd.DataFrame(columns=["Customer ID", "Customer Name", "Instance ID"])
+
+    # Append new customer data
+    new_data = pd.DataFrame([[customer_id, customer_name, elastic_instance_id]], columns=["Customer ID", "Customer Name", "Instance ID"])
+    df = pd.concat([df, new_data], ignore_index=True)
+
+    # Save back to Excel
+    df.to_excel(file_path, index=False, engine="openpyxl")
+
+    messagebox.showinfo("Success", "Customer data saved to DM_ENT_MGMT_DB.xlsx")
+
 # Create the main application window
 root = tk.Tk()
 root.title("Revenera Dynamic Monetization Standalone Tool")
@@ -481,7 +567,28 @@ ttk.Button(rate_table_tab, text="Rate Table API Reference", command=open_api_ref
 # Exit Button
 ttk.Button(rate_table_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
 
-# Customer Entitlements Tab - Placeholder for Future Development
-ttk.Label(customer_entitlements_tab, text="Customer Entitlements Features Coming Soon!", font=("Arial", 12, "bold")).pack(pady=50)
+# Customer Entitlements Tab 
+ttk.Label(customer_entitlements_tab, text="New Customer Registration", font=("Arial", 12, "bold")).pack(pady=20)
+
+# Create a frame for better layout management
+customer_frame = tk.Frame(customer_entitlements_tab)
+customer_frame.pack(pady=15)
+
+# Customer ID Label and Entry (Left side)
+ttk.Label(customer_frame, text="Customer ID:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
+customer_id_entry = ttk.Entry(customer_frame, width=20)
+customer_id_entry.pack(side="left", padx=5)
+
+# Customer Name Label and Entry (Right of Customer ID)
+ttk.Label(customer_frame, text="Customer Name:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
+customer_name_entry = ttk.Entry(customer_frame, width=25)
+customer_name_entry.pack(side="left", padx=5)
+
+# Register Customer Button (Right of Customer Name)
+register_button = ttk.Button(customer_frame, text="Register Customer", command=register_customer, padding=(5, 7), width=20)
+register_button.pack(side="left", padx=10)
+
+ttk.Button(customer_entitlements_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
+
 
 root.mainloop()
