@@ -388,11 +388,11 @@ def post_to_site():
         if response.status_code in [200, 201]:
             messagebox.showinfo("Success", "Rate Table posted successfully")
         else:
-            messagebox.showerror("Error", f"Failed to post Rate Table: {response.status_code}\n{response.text}")
-
+            if response.status_code == 409:
+                messagebox.showwarning("Warning", f"Rate Table with the specified Series and Version already exists")
     except Exception as e:
         pass
-        #messagebox.showerror("Error", f"Failed to process data: {str(e)}")
+        messagebox.showerror("Error", f"Failed to process data: {str(e)}")
 
 def open_user_guide():
     webbrowser.open("https://docs.revenera.com/dm/dynamicmonetization_ug/Content/helplibrary/DMGettingStarted.htm")
