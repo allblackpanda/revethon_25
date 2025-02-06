@@ -412,24 +412,10 @@ def read_config():
     return config
 
 config = read_config()
-database_selection = config.get("Database_Selection", "Google_Sheets")  # Default to Google Sheets
-
-# Google Sheets Integration
-def connect_google_sheets():
-    """Connects to Google Sheets using the service account key file."""
-    try:
-        scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name("revethon-2025.json", scope)
-        client = gspread.authorize(creds)
-        return client.open("Revethon-DM-ENT-MGMT").sheet1  # Opens the first sheet
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to connect to Google Sheets: {str(e)}")
-        return None
-
 
 # Register Customer Function
 def register_customer():
-    """Registers a new customer and saves it to the selected database (Excel or Google Sheets)."""
+    """Registers a new customer using DAPI"""
     
     customer_id = customer_id_entry.get().strip()
     customer_name = customer_name_entry.get().strip()
@@ -464,50 +450,12 @@ def register_customer():
 
             messagebox.showinfo("Success", f"Customer registered successfully!\nElastic Instance ID: {elastic_instance_id}")
 
-            # Save data based on configuration
-            if database_selection == "Google_Sheets":
-                save_to_google_sheets(customer_id, customer_name, elastic_instance_id)
-            else:
-                save_to_excel(customer_id, customer_name, elastic_instance_id)
-
         else:
             messagebox.showerror("Error", f"Failed to register customer: {response.status_code}\n{response.text}")
 
     except Exception as e:
         messagebox.showerror("Error", f"Request failed: {str(e)}")
 
-# Save Data to Google Sheets
-def save_to_google_sheets(customer_id, customer_name, elastic_instance_id):
-    """Saves customer registration data to Google Sheets."""
-    sheet = connect_google_sheets()
-    if not sheet:
-        return
-
-    try:
-        sheet.append_row([customer_id, customer_name, elastic_instance_id])
-        messagebox.showinfo("Success", "Customer data saved to Google Sheets (Revethon-DM-ENT-MGMT).")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to write to Google Sheets: {str(e)}")
-
-def save_to_excel(customer_id, customer_name, elastic_instance_id):
-    """Saves the Customer ID, Customer Name, and Elastic Instance ID to an Excel file."""
-    
-    file_path = "DM_ENT_MGMT_DB-UAT.xlsx"
-
-    # Load or create DataFrame
-    if os.path.exists(file_path):
-        df = pd.read_excel(file_path, engine="openpyxl")
-    else:
-        df = pd.DataFrame(columns=["Customer ID", "Customer Name", "Instance ID"])
-
-    # Append new customer data
-    new_data = pd.DataFrame([[customer_id, customer_name, elastic_instance_id]], columns=["Customer ID", "Customer Name", "Instance ID"])
-    df = pd.concat([df, new_data], ignore_index=True)
-
-    # Save back to Excel
-    df.to_excel(file_path, index=False, engine="openpyxl")
-
-    messagebox.showinfo("Success", "Customer data saved to DM_ENT_MGMT_DB-UAT.xlsx")
 
 # Create the main application window
 root = tk.Tk()
