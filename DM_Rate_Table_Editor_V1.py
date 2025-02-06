@@ -8,6 +8,7 @@ import json
 import datetime
 import webbrowser
 import re
+import uuid
 from io import BytesIO
 import pandas as pd
 import os
@@ -36,6 +37,8 @@ EXAMPLE_RATE_TABLE = [{
         }
     ]
 }]
+
+UAT_OPTION = "-uat"
 
 
 
@@ -86,7 +89,7 @@ def filter_series(input_series):
     return total_series 
 
 def get_rate_tables(filtered=False):
-    if env_var.get() == "-uat":
+    if env_var.get() == UAT_OPTION:
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
     else:
         url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
@@ -220,7 +223,7 @@ def get_rate_tables(filtered=False):
                 selected_series_version = series_var.get()
                 selected_series, selected_version = selected_series_version.split(" - v")
                 
-                if env_var.get() == "-uat":
+                if env_var.get() == UAT_OPTION:
                     url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables/?series={selected_series}&version={selected_version}"
                 else:
                     url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables/?series={selected_series}&version={selected_version}"
@@ -380,7 +383,7 @@ def post_to_site():
             #json.dump(rate_table, json_file, indent=4)
 
         # Determine API endpoint
-        base_url = f"https://{config['site']}-uat" if env_var.get() == "-uat" else f"https://{config['site']}"
+        base_url = f"https://{config['site']}-uat" if env_var.get() == UAT_OPTION else f"https://{config['site']}"
         api_url = f"{base_url}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
 
         headers = {
@@ -426,7 +429,7 @@ def register_customer():
         return
 
     # Determine API URL
-    if env_var.get() == "-uat":
+    if env_var.get() == UAT_OPTION:
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
     else:
         url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
@@ -449,6 +452,7 @@ def register_customer():
             elastic_instance_id = response_data.get("id", "Unknown")
 
             messagebox.showinfo("Success", f"Customer registered successfully!\nElastic Instance ID: {elastic_instance_id}")
+            return elastic_instance_id
 
         else:
             messagebox.showerror("Error", f"Failed to register customer: {response.status_code}\n{response.text}")
@@ -456,6 +460,95 @@ def register_customer():
     except Exception as e:
         messagebox.showerror("Error", f"Request failed: {str(e)}")
 
+def get_rate_tables_names():
+    if env_var.get() == UAT_OPTION:
+        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
+    else:
+        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
+    
+    headers = {
+        "Authorization": f"Bearer {config['jwt']}",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        table_list = []
+        for entry in data:
+            if entry["series"] not in table_list:
+                table_list.append(entry["series"])
+        print(table_list)
+        return table_list
+    else:
+        messagebox.showerror("Error", f"Failed to retrieve rate tables: {response.status_code}")
+
+
+def generate_uuid():
+    return str(uuid.uuid4())
+
+# After Registering, map the token line items
+def map_token_line_item(instance_id):
+    customer_name = customer_name_entry.get().strip()
+    token_number = token_number_entry.get().strip()
+    start_date = start_date_label.cget("text")
+    end_date = end_date_label.cget("text")
+    selected_rate_table = rate_table_var.get()
+    start_epoch = convert_date_to_epoch(start_date + " 00:00:00")
+    end_epoch = convert_date_to_epoch(end_date + " 23:59:59")
+    
+    # Call API
+    # Determine API URL
+    if env_var.get() == UAT_OPTION:
+        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{instance_id}/line-items"
+    else:
+        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{instance_id}/line-items"
+
+    headers = {
+        "Authorization": f"Bearer {config['jwt']}",
+        "Content-Type": "application/json"
+    }
+
+    line_item_payload = {
+        "activationId": generate_uuid(),
+        "state": "DEPLOYED",
+        "quantity": int(token_number),
+        "start": start_epoch,
+        "end": end_epoch,
+        "used": 0,
+        "attributes": {
+            "elastic": True,
+            "rateTableSeries": selected_rate_table
+        }
+    }
+    json_payload = json.dumps(line_item_payload)
+
+    try:
+        response = requests.put(url, headers=headers, data=json_payload)
+
+        if response.status_code in [200, 201]:         
+            messagebox.showinfo("Success: ", f"{token_number} Tokens successfully mapped to: {customer_name}")
+
+        else:
+            messagebox.showerror("Error", f"Failed to map tokens to customer: {response.status_code}\n{response.text}")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Request failed: {str(e)}")   
+
+# Register Customer Function
+def create_and_map_customer():
+    customer_id = customer_id_entry.get().strip()
+    token_number = token_number_entry.get().strip()
+    start_date = start_date_label.cget("text")
+    end_date = end_date_label.cget("text")
+    selected_rate_table = rate_table_var.get()
+    if not customer_id or not token_number or not start_date or not end_date or not selected_rate_table or end_date =="Select End Date" or start_date == "Select Start Date":
+        messagebox.showerror("All fields are required")
+        return
+    else:
+        # We want to modify register customer to check if the accountId already exists and has a default instance. 
+        # If it comes back, don't create a new customer instance. Instead proceed to map the token line item
+        elastic_instance_id = register_customer()
+        map_token_line_item(elastic_instance_id)
 
 # Create the main application window
 root = tk.Tk()
@@ -480,13 +573,13 @@ customer_entitlements_tab = ttk.Frame(notebook)
 notebook.add(customer_entitlements_tab, text="Customer Entitlement Management", padding= 5)
 
 # UI Components for "Rate Table Generator" tab
-env_var = tk.StringVar(value="-uat")
+env_var = tk.StringVar(value=UAT_OPTION)
 
 # Radio Buttons for Environment Selection
 radio_frame = tk.Frame(rate_table_tab)
 radio_frame.pack(side="top", anchor="nw", pady=30)
 tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
-tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value="-uat").pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack(side="left", padx=10)
 # Tenant label
 ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
 
@@ -540,7 +633,7 @@ radio_frame = tk.Frame(customer_entitlements_tab)
 radio_frame.pack(side="top", anchor="nw", pady=30)
 
 tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
-tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value="-uat").pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack(side="left", padx=10)
 
 # Create a frame for better layout management
 customer_frame = tk.Frame(customer_entitlements_tab)
@@ -556,12 +649,149 @@ ttk.Label(customer_frame, text="Customer Name:", font=("Arial", 10, "normal")).p
 customer_name_entry = ttk.Entry(customer_frame, width=25)
 customer_name_entry.pack(side="left", padx=5)
 
-# Register Customer Button (Right of Customer Name)
-register_button = ttk.Button(customer_frame, text="Register Customer", command=register_customer, padding=(5, 7), width=20)
-register_button.pack(side="left", padx=10)
+
+def open_calendar(label):
+    def set_date():
+        selected_date = cal.selection_get().strftime('%Y-%m-%d')
+        label.config(text=selected_date)
+        top.destroy()
+    
+    top = Toplevel(root)
+    top.title("Select Date")
+    top.geometry(f"{400}x{420}+{x+80}+{y+70}")
+    today = datetime.date.today()
+    # now = datetime.datetime.now()  # Get the current time
+    cal = Calendar(top, font="Arial 14", selectmode='day', cursor="hand1",
+                   year=today.year, month=today.month, day=today.day, 
+                   background='lightgreen', foreground='black',
+                   bordercolor='gray', headersbackground='gray',
+                   normalbackground='white', weekendbackground='lightgray', 
+                   selectbackground='blue')
+    cal.pack(pady=10)
+    ttk.Button(top, text="Select", command=set_date).pack()
+
+# Create extra frame for better layout management
+entry_frame = tk.Frame(customer_entitlements_tab)
+entry_frame.place(x=30, y=180) 
+
+ttk.Label(entry_frame, text="Rate Table:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
+rate_table_var = tk.StringVar()
+
+rate_table_list = get_rate_tables_names()
+if rate_table_list:
+    rate_table_var.set(rate_table_list[0])
+rate_table_dropdown = ttk.Combobox(entry_frame, textvariable=rate_table_var, values=rate_table_list, width=25)
+rate_table_dropdown.state(['readonly'])
+rate_table_dropdown.pack(side="left", padx=5)
+ttk.Label(entry_frame, text="Number of Tokens:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
+
+def validate_token_input(P):
+    return P.isdigit() and int(P) > 0 if P else True
+
+vcmd = (entry_frame.register(validate_token_input), "%P")
+
+token_number_entry = ttk.Entry(entry_frame, width=30, font=("Arial", 10, "normal"), validate="key", validatecommand=vcmd)
+token_number_entry.pack(side="left", padx=5)
+
+start_date_frame = tk.Frame(customer_entitlements_tab)
+start_date_frame.place(x=30, y=230) 
+
+ttk.Label(start_date_frame, text="Start Date:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
+
+start_date_label = ttk.Label(start_date_frame, text="Select Start Date", background="lightgray", font=("Arial", 10, "normal"), width=15)
+start_date_label.pack(side="left", padx=5)
+
+ttk.Button(start_date_frame, text="Pick Date", command=lambda: open_calendar(start_date_label)).pack(side="left", padx=5)
+
+end_date_frame = tk.Frame(customer_entitlements_tab)
+end_date_frame.place(x=30, y=280) 
+
+ttk.Label(end_date_frame, text="End Date:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
+
+end_date_label = ttk.Label(end_date_frame, text="Select End Date", background="lightgray", font=("Arial", 10, "normal"), width=15)
+end_date_label.pack(side="left", padx=9)
+
+ttk.Button(end_date_frame, text="Pick Date", command=lambda: open_calendar(end_date_label)).pack(side="left", padx=5)
+
+create_frame = tk.Frame(customer_entitlements_tab)
+create_frame.place(x=30, y=330)
+
+generate_button = ttk.Button(create_frame, text="Create & Entitle Customer", command=create_and_map_customer, padding=(5, 7), width=28)
+generate_button.pack(padx=10)
+
+map_label = ttk.Label(create_frame, text="", wraplength=400)
+map_label.pack()
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Exit Button (Bottom Right)
 ttk.Button(customer_entitlements_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
+
+
+def load_customer_names():
+    # Load the Excel file and get unique customer names
+    unique_customer_names = []
+    customer_name_list = []
+       # Determine API URL
+    if env_var.get() == UAT_OPTION:
+        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
+    else:
+        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
+
+    headers = {
+        "Authorization": f"Bearer {config['jwt']}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        unique_customer_names = []
+        if response.status_code in [200, 201]:
+            response_data = response.json()
+            instances = response_data.get("content")
+        
+            # Extract unique entries
+            unique_entries = {(entry["accountId"], entry["shortName"]) for entry in instances if entry["defaultInstance"]==True}
+
+            # Convert to a sorted list
+            unique_customer_names = sorted(unique_entries)
+            customer_name_list = [[customer[0] for customer in unique_customer_names],[customer[1] for customer in unique_customer_names]]
+
+        else:
+            messagebox.showerror("Error", f"Failed to get customer list: {response.status_code}\n{response.text}")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Request failed: {str(e)}")
+    return customer_name_list
+
+
+# Create "Map Tokens to Customer" tab
+existing_customer_tab = ttk.Frame(notebook)
+notebook.add(existing_customer_tab, text="Manage Existing Customers", padding=5)
+
+# UI Components for "Map Tokens to Customer" tab
+ttk.Label(existing_customer_tab, text="Manage Existing Customer", font=("Arial", 12, "bold")).pack(pady=20)
+
+ttk.Label(existing_customer_tab, text="Customer Name:").pack()
+unique_customer_names = load_customer_names()
+selected_id_var = tk.StringVar(existing_customer_tab)
+if unique_customer_names:
+    selected_id_var.set(unique_customer_names[0][0])
+exisiting_customer_id_entry = ttk.Combobox(existing_customer_tab, textvariable=selected_id_var, values=unique_customer_names[0], width=30)
+exisiting_customer_id_entry.pack()
+
+# Exit Button (Bottom Right)
+ttk.Button(existing_customer_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
 
 
 root.mainloop()
