@@ -581,11 +581,11 @@ def load_customer_names():
             instances = response_data.get("content")
         
             # Extract unique entries
-            unique_entries = {(entry["accountId"], entry["shortName"]) for entry in instances if entry["defaultInstance"]==True}
+            unique_entries = {(entry["accountId"], entry["shortName"], entry["id"]) for entry in instances if entry["defaultInstance"]==True}
 
             # Convert to a sorted list
             unique_customer_names = sorted(unique_entries)
-            customer_name_list = [[customer[0] for customer in unique_customer_names],[customer[1] for customer in unique_customer_names]]
+            customer_name_list = [[customer[0] for customer in unique_customer_names],[customer[1] for customer in unique_customer_names],[customer[2] for customer in unique_customer_names]]
 
         else:
             messagebox.showerror("Error", f"Failed to get customer list: {response.status_code}\n{response.text}")
@@ -593,6 +593,30 @@ def load_customer_names():
     except Exception as e:
         messagebox.showerror("Error", f"Request failed: {str(e)}")
     return customer_name_list
+
+def get_customer_line_items():
+    customer_id = selected_id_var.get()
+    if not customer_id:
+        messagebox.showerror("Error", "Please select a customer.")
+        return
+    
+    if env_var.get() == UAT_OPTION:
+        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_id}/line-items"
+    else:
+        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_id}/line-items"
+
+    headers = {"Authorization": f"Bearer {config['jwt']}", "Content-Type": "application/json"}
+    
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        line_items_text.config(state="normal")
+        line_items_text.delete("1.0", "end")
+        line_items_text.insert("1.0", json.dumps(data, indent=4))
+        line_items_text.config(state="disabled")
+    else:
+        messagebox.showerror("Error", f"Failed to get line items: {response.status_code}")
+
 # Create a Notebook (Tabbed Interface)
 notebook = ttk.Notebook(root)
 notebook.pack(expand=True, fill="both")
@@ -616,7 +640,7 @@ tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack
 # Tenant label
 ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
 
-# Fetch and display logo
+# get and display logo
 logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
 response = requests.get(logo_url)
 if response.status_code == 200:
@@ -627,7 +651,7 @@ if response.status_code == 200:
 # Buttons for Rate Table Actions
 button_width = 23
 
-# Add a new button to fetch filtered rate tables
+# Add a new button to get filtered rate tables
 filter_var = tk.BooleanVar()
 ttk.Button(rate_table_tab, text="Get All Rate Tables", command=get_rate_tables, padding=(5, 7), width=button_width).place(x=10, y=120)
 ttk.Button(rate_table_tab, text="Get Current/Future Tables", command=lambda: get_rate_tables(filtered=True), padding=(5, 7), width=button_width).place(x=10, y=170)
@@ -781,9 +805,16 @@ ttk.Label(existing_customer_tab, text="Customer Name:").pack()
 unique_customer_names = load_customer_names()
 selected_id_var = tk.StringVar(existing_customer_tab)
 if unique_customer_names:
-    selected_id_var.set(unique_customer_names[0][0])
-exisiting_customer_id_entry = ttk.Combobox(existing_customer_tab, textvariable=selected_id_var, values=unique_customer_names[0], width=30, height=70)  # Increased height for longer scrolling box
+    selected_id_var.set(unique_customer_names[0][0][0])
+exisiting_customer_id_entry = ttk.Combobox(existing_customer_tab, textvariable=selected_id_var, values=unique_customer_names[2], width=30, height=70)  # Increased height for longer scrolling box
 exisiting_customer_id_entry.pack()
+
+ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
+line_items_text = Text(existing_customer_tab, wrap="word", height=15, width=60)
+line_items_text.pack()
+
+get_button = ttk.Button(existing_customer_tab, text="Get Line Items", command=get_customer_line_items)
+get_button.pack()
 
 # Exit Button (Bottom Right)
 ttk.Button(existing_customer_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
