@@ -758,43 +758,6 @@ map_label.pack()
 # Exit Button (Bottom Right)
 ttk.Button(customer_entitlements_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
 
-
-def load_customer_names():
-    unique_customer_names = []
-    customer_name_list = []
-       # Determine API URL
-    if env_var.get() == UAT_OPTION:
-        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
-    else:
-        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
-
-    headers = {
-        "Authorization": f"Bearer {config['jwt']}",
-        "Content-Type": "application/json"
-    }
-    
-    try:
-        response = requests.get(url, headers=headers)
-        unique_customer_names = []
-        if response.status_code in [200, 201]:
-            response_data = response.json()
-            instances = response_data.get("content")
-        
-            # Extract unique entries
-            unique_entries = {(entry["accountId"], entry["shortName"]) for entry in instances if entry["defaultInstance"]==True}
-
-            # Convert to a sorted list
-            unique_customer_names = sorted(unique_entries)
-            customer_name_list = [[customer[0] for customer in unique_customer_names],[customer[1] for customer in unique_customer_names]]
-
-        else:
-            messagebox.showerror("Error", f"Failed to get customer list: {response.status_code}\n{response.text}")
-
-    except Exception as e:
-        messagebox.showerror("Error", f"Request failed: {str(e)}")
-    return customer_name_list
-
-
 # Create "Manage Existing Customers" tab
 existing_customer_tab = ttk.Frame(notebook)
 notebook.add(existing_customer_tab, text="Manage Existing Customers", padding=5)
