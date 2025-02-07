@@ -41,7 +41,6 @@ EXAMPLE_RATE_TABLE = [{
 UAT_OPTION = "-uat"
 
 
-
 def read_config():
     config = {}
     with open("config.txt", "r") as file:
@@ -89,6 +88,7 @@ def filter_series(input_series):
     return total_series 
 
 def get_rate_tables(filtered=False):
+    #print(f'Button selected is',UAT_OPTION)
     if env_var.get() == UAT_OPTION:
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
     else:
@@ -559,7 +559,40 @@ window_width, window_height = 770, 720
 screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
+def load_customer_names():
+    unique_customer_names = []
+    customer_name_list = []
+       # Determine API URL
+    if env_var.get() == UAT_OPTION:
+        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
+    else:
+        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
 
+    headers = {
+        "Authorization": f"Bearer {config['jwt']}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        unique_customer_names = []
+        if response.status_code in [200, 201]:
+            response_data = response.json()
+            instances = response_data.get("content")
+        
+            # Extract unique entries
+            unique_entries = {(entry["accountId"], entry["shortName"]) for entry in instances if entry["defaultInstance"]==True}
+
+            # Convert to a sorted list
+            unique_customer_names = sorted(unique_entries)
+            customer_name_list = [[customer[0] for customer in unique_customer_names],[customer[1] for customer in unique_customer_names]]
+
+        else:
+            messagebox.showerror("Error", f"Failed to get customer list: {response.status_code}\n{response.text}")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Request failed: {str(e)}")
+    return customer_name_list
 # Create a Notebook (Tabbed Interface)
 notebook = ttk.Notebook(root)
 notebook.pack(expand=True, fill="both")
@@ -622,7 +655,7 @@ ttk.Button(rate_table_tab, text="Rate Table API Reference", command=open_api_ref
 ttk.Button(rate_table_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
 
 # Customer Entitlements Tab
-ttk.Label(customer_entitlements_tab, text="New Customer Registration", font=("Arial", 12, "bold")).place(relx=0.5, y=70, anchor="center")
+ttk.Label(customer_entitlements_tab, text="Entitle New Customers", font=("Arial", 12, "bold")).place(relx=0.5, y=70, anchor="center")
 
 
 # Tenant label (Upper Left at x=30, y=10)
@@ -722,31 +755,18 @@ generate_button.pack(padx=10)
 map_label = ttk.Label(create_frame, text="", wraplength=400)
 map_label.pack()
 
-
-
-
-
-
-
-
-
-
-
-
-
 # Exit Button (Bottom Right)
 ttk.Button(customer_entitlements_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
 
 
 def load_customer_names():
-    # Load the Excel file and get unique customer names
     unique_customer_names = []
     customer_name_list = []
        # Determine API URL
     if env_var.get() == UAT_OPTION:
-        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
+        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
     else:
-        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
+        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
 
     headers = {
         "Authorization": f"Bearer {config['jwt']}",
@@ -775,23 +795,34 @@ def load_customer_names():
     return customer_name_list
 
 
-# Create "Map Tokens to Customer" tab
+# Create "Manage Existing Customers" tab
 existing_customer_tab = ttk.Frame(notebook)
 notebook.add(existing_customer_tab, text="Manage Existing Customers", padding=5)
 
-# UI Components for "Map Tokens to Customer" tab
-ttk.Label(existing_customer_tab, text="Manage Existing Customer", font=("Arial", 12, "bold")).pack(pady=20)
+# Tenant label (Upper Left at x=30, y=10)
+ttk.Label(existing_customer_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
+
+# Radio Buttons for Environment Selection (Moved to x=30, y=40, Left Side)
+radio_frame = tk.Frame(existing_customer_tab)
+radio_frame.pack(side="top", anchor="nw", pady=30)
+
+tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack(side="left", padx=10)
+
+
+# UI Components for "Manage Existing Customer" tab
+
+ttk.Label(existing_customer_tab, text="Manage Existing Customers", font=("Arial", 12, "bold")).pack(pady=0)
 
 ttk.Label(existing_customer_tab, text="Customer Name:").pack()
 unique_customer_names = load_customer_names()
 selected_id_var = tk.StringVar(existing_customer_tab)
 if unique_customer_names:
     selected_id_var.set(unique_customer_names[0][0])
-exisiting_customer_id_entry = ttk.Combobox(existing_customer_tab, textvariable=selected_id_var, values=unique_customer_names[0], width=30)
+exisiting_customer_id_entry = ttk.Combobox(existing_customer_tab, textvariable=selected_id_var, values=unique_customer_names[0], width=30, height=70)  # Increased height for longer scrolling box
 exisiting_customer_id_entry.pack()
 
 # Exit Button (Bottom Right)
 ttk.Button(existing_customer_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
-
 
 root.mainloop()
