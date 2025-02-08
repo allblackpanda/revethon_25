@@ -574,8 +574,7 @@ def on_existing_customers_tab_selected(event):
         selected_account_var.set("")  # Clear selection if no customers exist
 
 def on_env_change():
-    """Reload customer names when the environment selection changes."""
-    #print(f"Environment changed to: {env_var.get()}")  # Debugging statement
+    """Reload customer names and clear the line items display when the environment selection changes."""
     global customer_data
     customer_data = load_customer_names()  # Reload customer list
 
@@ -585,6 +584,11 @@ def on_env_change():
         selected_account_var.set(customer_data[0]["accountId"])  # Set the first option
     else:
         selected_account_var.set("")  # Clear selection if no data
+
+    # Clear the "Get Line Items" display
+    line_items_text.config(state="normal")
+    line_items_text.delete("1.0", "end")
+    line_items_text.config(state="disabled")
 
 def load_customer_names():
     customer_data = []
@@ -654,7 +658,7 @@ notebook.add(rate_table_tab, text="Rate Table Generator", padding= 5)
 
 # Create "Customer Entitlements" tab
 customer_entitlements_tab = ttk.Frame(notebook)
-notebook.add(customer_entitlements_tab, text="Customer Entitlement Management", padding= 5)
+notebook.add(customer_entitlements_tab, text="Entitle New Customers", padding= 5)
 
 # UI Components for "Rate Table Generator" tab
 env_var = tk.StringVar(value=UAT_OPTION)
@@ -699,10 +703,6 @@ ttk.Button(rate_table_tab, text="Rate Table API Reference", command=open_api_ref
 
 # Exit Button
 ttk.Button(rate_table_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
-
-# Customer Entitlements Tab
-ttk.Label(customer_entitlements_tab, text="Entitle New Customers", font=("Arial", 12, "bold")).place(relx=0.5, y=70, anchor="center")
-
 
 # Tenant label (Upper Left at x=30, y=10)
 ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
@@ -820,8 +820,6 @@ tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION, comm
 
 
 # UI Components for "Manage Existing Customer" tab
-
-ttk.Label(existing_customer_tab, text="Manage Existing Customers", font=("Arial", 12, "bold")).pack(pady=0)
 
 # Bind the function to tab selection
 notebook.bind("<<NotebookTabChanged>>", on_existing_customers_tab_selected)
