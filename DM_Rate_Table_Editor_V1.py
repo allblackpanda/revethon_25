@@ -40,7 +40,6 @@ EXAMPLE_RATE_TABLE = [{
 
 UAT_OPTION = "-uat"
 
-
 def read_config():
     config = {}
     with open("config.txt", "r") as file:
@@ -560,6 +559,33 @@ screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight(
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
 
+def on_existing_customers_tab_selected(event):
+    """Update customer dropdown values when the 'Manage Existing Customers' tab is selected."""
+    global customer_data
+    customer_data = load_customer_names()  # Reload customer list
+    
+    # Update dropdown values
+    customer_dropdown["values"] = [c["accountId"] for c in customer_data]
+    
+    # Set the first customer by default if available
+    if customer_data:
+        selected_account_var.set(customer_data[0]["accountId"])
+    else:
+        selected_account_var.set("")  # Clear selection if no customers exist
+
+def on_env_change():
+    """Reload customer names when the environment selection changes."""
+    #print(f"Environment changed to: {env_var.get()}")  # Debugging statement
+    global customer_data
+    customer_data = load_customer_names()  # Reload customer list
+
+    # Update the customer dropdown
+    customer_dropdown["values"] = [c["accountId"] for c in customer_data]
+    if customer_data:
+        selected_account_var.set(customer_data[0]["accountId"])  # Set the first option
+    else:
+        selected_account_var.set("")  # Clear selection if no data
+
 def load_customer_names():
     customer_data = []
     
@@ -785,17 +811,20 @@ notebook.add(existing_customer_tab, text="Manage Existing Customers", padding=5)
 # Tenant label (Upper Left at x=30, y=10)
 ttk.Label(existing_customer_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
 
-# Radio Buttons for Environment Selection (Moved to x=30, y=40, Left Side)
+# Radio Buttons for Environment Selection (Updated)
 radio_frame = tk.Frame(existing_customer_tab)
 radio_frame.pack(side="top", anchor="nw", pady=30)
 
-tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
-tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production", command=on_env_change).pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION, command=on_env_change).pack(side="left", padx=10)
 
 
 # UI Components for "Manage Existing Customer" tab
 
 ttk.Label(existing_customer_tab, text="Manage Existing Customers", font=("Arial", 12, "bold")).pack(pady=0)
+
+# Bind the function to tab selection
+notebook.bind("<<NotebookTabChanged>>", on_existing_customers_tab_selected)
 
 # Load customers and update UI
 ttk.Label(existing_customer_tab, text="Select Customer (Account ID):").pack()
