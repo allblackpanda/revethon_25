@@ -900,7 +900,9 @@ customer_dropdown = ttk.Combobox(existing_customer_tab, textvariable=selected_ac
 customer_dropdown.bind("<<ComboboxSelected>>", lambda event: get_customer_line_items())
 customer_dropdown.pack()
 
-
+# Add blank labels to create space before "Customer Line Items:"
+ttk.Label(existing_customer_tab, text="").pack()
+ttk.Label(existing_customer_tab, text="").pack()
 ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
 line_items_text = Text(existing_customer_tab, wrap="word", height=25, width=85)
 line_items_text.pack()
