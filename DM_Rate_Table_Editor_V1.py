@@ -641,12 +641,76 @@ def get_customer_line_items():
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         data = response.json()
+
+        # Clear previous content
         line_items_text.config(state="normal")
         line_items_text.delete("1.0", "end")
-        line_items_text.insert("1.0", json.dumps(data, indent=4))
+
+        if not data:
+            line_items_text.insert("1.0", "  No line items found for this customer.\n")  # Added two spaces at the beginning
+            line_items_text.config(state="disabled")
+            return
+
+        # Convert and sort data by Start Date
+        formatted_data = []
+        for item in data:
+            start_epoch = item.get("start", 0)
+            start_date = convert_epoch_to_date(start_epoch)[:10]  # Extract YYYY-MM-DD
+            end_epoch = item.get("end", "")
+            end_date = "Permanent" if end_epoch == 253402300799999 else convert_epoch_to_date(end_epoch)[:10]  # Extract YYYY-MM-DD
+            quantity = item.get("quantity", "N/A")
+            used = round(float(item.get("used", 0)), 1)  # Round Used to 1 decimal place
+
+            # Calculate %Used (avoid division by zero)
+            percent_used = round((used / quantity) * 100, 1) if quantity and quantity != "N/A" and quantity > 0 else 0.0
+
+            rate_table_series = item.get("attributes", {}).get("rateTableSeries", "N/A")
+
+            formatted_data.append({
+                "Start Date": start_date,
+                "End Date": end_date,
+                "Quantity": quantity,
+                "Used": used,
+                "%Used": percent_used,  # New column
+                "Rate Table Series": rate_table_series,
+                "Start Epoch": start_epoch,  # Keep original epoch for sorting
+            })
+
+        # Sort by Start Date (ascending order)
+        formatted_data.sort(key=lambda x: x["Start Epoch"])
+
+        # Assign sequential line numbers **AFTER SORTING**
+        for index, item in enumerate(formatted_data, start=1):
+            item["Line #"] = index
+
+        # Table Header with **extra blank row before it**
+        formatted_output = (
+            f"\n"  # Adds a blank row before the table
+            f"  {'Line#':<8}{'Start Date':<15}{'End Date':<15}{'Token Qty':<12}{'Used':<10}{'%Used':<10}{'Rate Table':<30}\n"
+            f"  {'-'*80}\n"
+        )
+
+        for item in formatted_data:
+            formatted_output += (
+                f"  {item['Line #']:<8}{item['Start Date']:<15}{item['End Date']:<15}{item['Quantity']:<12}{item['Used']:<10}{item['%Used']:<10}{item['Rate Table Series']:<30}\n"
+            )
+
+        # Display total count with leading spaces
+        formatted_output += f"\n  Total Line Items: {len(formatted_data)}\n"
+
+        # Insert into text widget
+        line_items_text.insert("1.0", formatted_output)
         line_items_text.config(state="disabled")
+    
     else:
         messagebox.showerror("Error", f"Failed to get line items: {response.status_code}")
+
+
+
+
+
+
+
 
 # Create a Notebook (Tabbed Interface)
 notebook = ttk.Notebook(root)
@@ -838,7 +902,7 @@ customer_dropdown.pack()
 
 
 ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
-line_items_text = Text(existing_customer_tab, wrap="word", height=25, width=80)
+line_items_text = Text(existing_customer_tab, wrap="word", height=25, width=85)
 line_items_text.pack()
 
 # Exit Button (Bottom Right)
