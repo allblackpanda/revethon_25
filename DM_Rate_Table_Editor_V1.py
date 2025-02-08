@@ -641,13 +641,8 @@ tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack
 # Tenant label
 ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
 
-# get and display logo
-logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
-response = requests.get(logo_url)
-if response.status_code == 200:
-    image_data = Image.open(BytesIO(response.content)).resize((200, 39), Image.Resampling.LANCZOS)
-    logo_image = ImageTk.PhotoImage(image_data)
-    tk.Label(rate_table_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
+
+
 
 # Buttons for Rate Table Actions
 button_width = 23
@@ -802,23 +797,22 @@ tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack
 
 ttk.Label(existing_customer_tab, text="Manage Existing Customers", font=("Arial", 12, "bold")).pack(pady=0)
 
-ttk.Label(existing_customer_tab, text="Customer ID:").pack()
+# Load customers and update UI
+ttk.Label(existing_customer_tab, text="Select Customer (Account ID):").pack()
 customer_data = load_customer_names()
 selected_account_var = tk.StringVar(existing_customer_tab)
 
 if customer_data:
     selected_account_var.set(customer_data[0]["accountId"])
 customer_dropdown = ttk.Combobox(existing_customer_tab, textvariable=selected_account_var,
-                                 values=[c["accountId"] for c in customer_data], width=30)
+                                 values=[c["accountId"] for c in customer_data], width=40, state='readonly', height=70)
+customer_dropdown.bind("<<ComboboxSelected>>", lambda event: get_customer_line_items())
 customer_dropdown.pack()
 
 
 ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
 line_items_text = Text(existing_customer_tab, wrap="word", height=15, width=60)
 line_items_text.pack()
-
-get_button = ttk.Button(existing_customer_tab, text="Get Line Items", command=get_customer_line_items)
-get_button.pack()
 
 # Exit Button (Bottom Right)
 ttk.Button(existing_customer_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
