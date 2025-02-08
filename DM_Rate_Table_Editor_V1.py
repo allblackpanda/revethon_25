@@ -477,7 +477,7 @@ def get_rate_tables_names():
         for entry in data:
             if entry["series"] not in table_list:
                 table_list.append(entry["series"])
-        print(table_list)
+        #print(table_list)
         return table_list
     else:
         messagebox.showerror("Error", f"Failed to retrieve rate tables: {response.status_code}")
@@ -559,10 +559,10 @@ window_width, window_height = 770, 720
 screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
+
 def load_customer_names():
-    unique_customer_names = []
-    customer_name_list = []
-       # Determine API URL
+    customer_data = []
+    
     if env_var.get() == UAT_OPTION:
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
     else:
@@ -575,30 +575,31 @@ def load_customer_names():
     
     try:
         response = requests.get(url, headers=headers)
-        unique_customer_names = []
         if response.status_code in [200, 201]:
             response_data = response.json()
-            instances = response_data.get("content")
+            instances = response_data.get("content", [])
         
-            # Extract unique entries
-            unique_entries = {(entry["accountId"], entry["shortName"], entry["id"]) for entry in instances if entry["defaultInstance"]==True}
-
-            # Convert to a sorted list
-            unique_customer_names = sorted(unique_entries)
-            customer_name_list = [[customer[0] for customer in unique_customer_names],[customer[1] for customer in unique_customer_names],[customer[2] for customer in unique_customer_names]]
-
+            # Store customer data in an array
+            customer_data = sorted([
+                {"accountId": entry["accountId"], "shortName": entry["shortName"], "id": entry["id"]} 
+                for entry in instances if entry.get("defaultInstance")
+            ], key=lambda x: x["accountId"]) # Sort by accountId
         else:
             messagebox.showerror("Error", f"Failed to get customer list: {response.status_code}\n{response.text}")
-
     except Exception as e:
         messagebox.showerror("Error", f"Request failed: {str(e)}")
-    return customer_name_list
+    return customer_data
+
 
 def get_customer_line_items():
-    customer_id = selected_id_var.get()
-    if not customer_id:
-        messagebox.showerror("Error", "Please select a customer.")
+    selected_account_id = selected_account_var.get()
+    selected_customer = next((c for c in customer_data if c["accountId"] == selected_account_id), None)
+    
+    if not selected_customer:
+        messagebox.showerror("Error", "Please select a valid customer.")
         return
+    
+    customer_id = selected_customer["id"]
     
     if env_var.get() == UAT_OPTION:
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_id}/line-items"
@@ -801,13 +802,16 @@ tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack
 
 ttk.Label(existing_customer_tab, text="Manage Existing Customers", font=("Arial", 12, "bold")).pack(pady=0)
 
-ttk.Label(existing_customer_tab, text="Customer Name:").pack()
-unique_customer_names = load_customer_names()
-selected_id_var = tk.StringVar(existing_customer_tab)
-if unique_customer_names:
-    selected_id_var.set(unique_customer_names[0][0][0])
-exisiting_customer_id_entry = ttk.Combobox(existing_customer_tab, textvariable=selected_id_var, values=unique_customer_names[2], width=30, height=70)  # Increased height for longer scrolling box
-exisiting_customer_id_entry.pack()
+ttk.Label(existing_customer_tab, text="Customer ID:").pack()
+customer_data = load_customer_names()
+selected_account_var = tk.StringVar(existing_customer_tab)
+
+if customer_data:
+    selected_account_var.set(customer_data[0]["accountId"])
+customer_dropdown = ttk.Combobox(existing_customer_tab, textvariable=selected_account_var,
+                                 values=[c["accountId"] for c in customer_data], width=30)
+customer_dropdown.pack()
+
 
 ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
 line_items_text = Text(existing_customer_tab, wrap="word", height=15, width=60)
