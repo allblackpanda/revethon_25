@@ -811,10 +811,20 @@ customer_dropdown.pack()
 
 
 ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
-line_items_text = Text(existing_customer_tab, wrap="word", height=15, width=60)
+line_items_text = Text(existing_customer_tab, wrap="word", height=25, width=80)
 line_items_text.pack()
 
 # Exit Button (Bottom Right)
 ttk.Button(existing_customer_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
+
+# Fetch and display logo
+logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
+response = requests.get(logo_url)
+if response.status_code == 200:
+    image_data = Image.open(BytesIO(response.content)).resize((200, 39), Image.Resampling.LANCZOS)
+    logo_image = ImageTk.PhotoImage(image_data)
+    tk.Label(rate_table_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
+    tk.Label(customer_entitlements_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
+    tk.Label(existing_customer_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")    
 
 root.mainloop()
