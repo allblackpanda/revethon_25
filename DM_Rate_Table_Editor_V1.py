@@ -15,6 +15,8 @@ import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+UAT_OPTION = "-uat"
+
 #Global example rate table
 EXAMPLE_RATE_TABLE = [{
     "effectiveFrom": "",
@@ -37,8 +39,6 @@ EXAMPLE_RATE_TABLE = [{
         }
     ]
 }]
-
-UAT_OPTION = "-uat"
 
 def read_config():
     config = {}
@@ -549,15 +549,6 @@ def create_and_map_customer():
         elastic_instance_id = register_customer()
         map_token_line_item(elastic_instance_id)
 
-# Create the main application window
-root = tk.Tk()
-root.title("Revenera Dynamic Monetization Standalone Tool")
-
-# Set window size and position
-window_width, window_height = 770, 720
-screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
-x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
-root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
 
 def on_existing_customers_tab_selected(event):
     """Update customer dropdown values when the 'Manage Existing Customers' tab is selected."""
@@ -705,12 +696,35 @@ def get_customer_line_items():
     else:
         messagebox.showerror("Error", f"Failed to get line items: {response.status_code}")
 
+def open_calendar(label):
+    def set_date():
+        selected_date = cal.selection_get().strftime('%Y-%m-%d')
+        label.config(text=selected_date)
+        top.destroy()
+    
+    top = Toplevel(root)
+    top.title("Select Date")
+    top.geometry(f"{400}x{420}+{x+80}+{y+70}")
+    today = datetime.date.today()
+    # now = datetime.datetime.now()  # Get the current time
+    cal = Calendar(top, font="Arial 14", selectmode='day', cursor="hand1",
+                   year=today.year, month=today.month, day=today.day, 
+                   background='lightgreen', foreground='black',
+                   bordercolor='gray', headersbackground='gray',
+                   normalbackground='white', weekendbackground='lightgray', 
+                   selectbackground='blue')
+    cal.pack(pady=10)
+    ttk.Button(top, text="Select", command=set_date).pack()
 
+# Create the main application window
+root = tk.Tk()
+root.title("Revenera Dynamic Monetization Standalone Tool")
 
-
-
-
-
+# Set window size and position
+window_width, window_height = 770, 720
+screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
+x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
+root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
 
 # Create a Notebook (Tabbed Interface)
 notebook = ttk.Notebook(root)
@@ -734,9 +748,6 @@ tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Producti
 tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack(side="left", padx=10)
 # Tenant label
 ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
-
-
-
 
 # Buttons for Rate Table Actions
 button_width = 23
@@ -791,27 +802,6 @@ customer_id_entry.pack(side="left", padx=5)
 ttk.Label(customer_frame, text="Customer Name:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
 customer_name_entry = ttk.Entry(customer_frame, width=25)
 customer_name_entry.pack(side="left", padx=5)
-
-
-def open_calendar(label):
-    def set_date():
-        selected_date = cal.selection_get().strftime('%Y-%m-%d')
-        label.config(text=selected_date)
-        top.destroy()
-    
-    top = Toplevel(root)
-    top.title("Select Date")
-    top.geometry(f"{400}x{420}+{x+80}+{y+70}")
-    today = datetime.date.today()
-    # now = datetime.datetime.now()  # Get the current time
-    cal = Calendar(top, font="Arial 14", selectmode='day', cursor="hand1",
-                   year=today.year, month=today.month, day=today.day, 
-                   background='lightgreen', foreground='black',
-                   bordercolor='gray', headersbackground='gray',
-                   normalbackground='white', weekendbackground='lightgray', 
-                   selectbackground='blue')
-    cal.pack(pady=10)
-    ttk.Button(top, text="Select", command=set_date).pack()
 
 # Create extra frame for better layout management
 entry_frame = tk.Frame(customer_entitlements_tab)
@@ -881,7 +871,6 @@ radio_frame.pack(side="top", anchor="nw", pady=30)
 
 tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production", command=on_env_change).pack(side="left", padx=10)
 tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION, command=on_env_change).pack(side="left", padx=10)
-
 
 # UI Components for "Manage Existing Customer" tab
 
