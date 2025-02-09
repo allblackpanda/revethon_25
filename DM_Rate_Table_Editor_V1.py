@@ -14,6 +14,8 @@ import pandas as pd
 import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import ttkbootstrap as ttkb
+from ttkbootstrap.dialogs import DatePickerDialog
 
 UAT_OPTION = "-uat"
 
@@ -55,36 +57,41 @@ def convert_epoch_to_date(epoch_ms):
     except ValueError:
         return "Invalid Date"
     
-def convert_date_to_epoch(date_str, date_format='%Y-%m-%d %H:%M:%S'):
+#def convert_date_to_epoch(date_str, date_format='%Y-%m-%d %H:%M:%S'):
+def convert_date_to_epoch(date_str, date_format='%Y-%m-%d'):
     try:
+        if not date_str:  # Handle empty strings
+            return 0  # Default to epoch 0 (Jan 1, 1970)
         dt = datetime.datetime.strptime(date_str, date_format)
-        epoch_ms = int(dt.timestamp() * 1000)  # Convert seconds to milliseconds
-        return epoch_ms
+        return int(dt.timestamp() * 1000)  # Convert to milliseconds
     except ValueError:
-        return "Invalid Date Format"
+        return 0  # Default to an old epoch time if parsing fails
+
 
 # Filter out historic tables and only return the latest versions active and any future tables
 def filter_series(input_series):
     current_epoch = int(time.time()) * 1000
     latest_versions = {}
     total_series = []
+    
     for item in input_series:
         item_series = item.get("series", "")
         item_version = float(item.get("version", 0))
-        effective_from = item.get("effectiveFrom", 0) if item.get("effectiveFrom") else 0
+        effective_from = item.get("effectiveFrom", "")  # Ensure it's a string
 
-        if convert_date_to_epoch(effective_from) >= current_epoch:
-            total_series.append(item) 
+        # Convert effective_from date to epoch
+        effective_from_epoch = convert_date_to_epoch(effective_from)
+
+        if effective_from_epoch >= current_epoch:
+            total_series.append(item)
         elif item_series not in latest_versions or float(item_version) > float(latest_versions[item_series]["version"]):
             latest_versions[item_series] = item               
         
     total_series.extend(latest_versions.values())
 
-    #Sort the list again
-    def return_key_value(array):
-        return array['series'] 
-    total_series.sort(key=return_key_value, reverse=True)
-    return total_series 
+    # Sort the list again
+    total_series.sort(key=lambda x: x['series'], reverse=True)
+    return total_series
 
 def get_rate_tables(filtered=False):
     #print(f'Button selected is',UAT_OPTION)
@@ -254,68 +261,15 @@ def get_rate_tables(filtered=False):
     except FileNotFoundError:
         messagebox.showerror("Error", "No rate tables found.")
 
+import ttkbootstrap as ttkb
+from ttkbootstrap.dialogs import DatePickerDialog
+
 def select_date():
-    def ok():
-        selected_date = cal.selection_get()
-        selected_hour = int(hour_combobox.get())
-        selected_minute = int(minute_combobox.get())
+    top = ttkb.Toplevel()
+    top.title("Select Date")
+    #top.geometry(f"{400}x{420}+{x+80}+{y+70}")
 
-        # Combine date and time
-        selected_datetime = datetime.datetime(
-            selected_date.year, selected_date.month, selected_date.day,
-            selected_hour, selected_minute
-        )
-        formatted_date = selected_datetime.strftime('%Y-%m-%d %H:%M:%S')
-
-        # Update Start Date in the currently displayed text
-        text_data = main_text_area.get("1.0", "end").strip()
-        if "Start Date:" in text_data:
-            updated_text = ""
-            for line in text_data.split("\n"):
-                if line.lstrip().startswith("Start Date:"):
-                    leading_spaces = len(line) - len(line.lstrip())
-                    updated_text += " " * leading_spaces + f"Start Date: \t{formatted_date}\n"
-                else:
-                    updated_text += line + "\n"
-            
-            main_text_area.config(state="normal")
-            main_text_area.delete("1.0", "end")
-            main_text_area.insert("1.0", updated_text)
-            result_label.config(text="Start Date updated Successfully")
-            main_text_area.config(state="normal")
-        
-        top.destroy()
-
-    top = tk.Toplevel(root)
-    top.title("Select Rate Table Start Date and Time")
-    top.geometry(f"{400}x{420}+{x+80}+{y+70}")
-    
-    today = datetime.date.today()
-    now = datetime.datetime.now()  # Get the current time
-
-    cal = Calendar(top, font="Arial 14", selectmode='day', cursor="hand1",
-                   year=today.year, month=today.month, day=today.day, 
-                   background='lightgreen', foreground='black',
-                   bordercolor='gray', headersbackground='gray',
-                   normalbackground='white', weekendbackground='lightgray', 
-                   selectbackground='blue')
-    cal.pack(fill="both", expand=True, padx=10, pady=10)
-
-    # Time selection frame
-    time_frame = tk.Frame(top)
-    time_frame.pack(pady=10)
-
-    tk.Label(time_frame, text="Hour:").pack(side="left", padx=5)
-    hour_combobox = ttk.Combobox(time_frame, values=[str(i).zfill(2) for i in range(24)], width=3)
-    hour_combobox.set(str(now.hour).zfill(2))  # Set current hour as default
-    hour_combobox.pack(side="left")
-
-    tk.Label(time_frame, text="Minute:").pack(side="left", padx=5)
-    minute_combobox = ttk.Combobox(time_frame, values=[str(i).zfill(2) for i in range(60)], width=3)
-    minute_combobox.set(str(now.minute).zfill(2))  # Set current minute as default
-    minute_combobox.pack(side="left")
-
-    tk.Button(top, text="Update Rate Table Start Date", command=ok).pack(pady=10)
+    date_picker = DatePickerDialog(top)
 
 def increment_version():
     """Increments the value of 'Series Version' in the main text UI."""
@@ -340,10 +294,31 @@ def increment_version():
     main_text_area.config(state="normal")
     result_label.config(text="Series Version incremented successfully")
 
+def rate_table_start_date():
+    date_picker = DatePickerDialog()
+    selected_date = date_picker.date_selected  # Corrected way to fetch selected date
+    if selected_date:
+        result_label.config(text=f"Selected Date: {selected_date}")
+
+    text_data = main_text_area.get("1.0", "end").strip()
+    if "Start Date:" in text_data:
+        updated_text = ""
+        for line in text_data.split("\n"):
+            if line.lstrip().startswith("Start Date:"):
+                leading_spaces = len(line) - len(line.lstrip())
+                updated_text += " " * leading_spaces + f"Start Date: \t{selected_date}\n"
+            else:
+                updated_text += line + "\n"
+        
+        main_text_area.config(state="normal")
+        main_text_area.delete("1.0", "end")
+        main_text_area.insert("1.0", updated_text)
+        result_label.config(text="Start Date updated Successfully")
+        main_text_area.config(state="normal")
+
 def post_to_site():
     """Posts the current contents of the Main UI to the configured site and writes it to a file."""
     text_data = main_text_area.get("1.0", "end").strip()
-
     if not text_data:
         messagebox.showerror("Error", "No data to post.")
         return
@@ -378,8 +353,8 @@ def post_to_site():
                     })
 
         # Write to JSON file  Enable for debug only
-        #with open("new_rate_table.json", "w") as json_file:
-            #json.dump(rate_table, json_file, indent=4)
+        #with open("rate_table_start_date_table.json", "w") as json_file:
+        #    json.dump(rate_table, json_file, indent=4)
 
         # Determine API endpoint
         base_url = f"https://{config['site']}-uat" if env_var.get() == UAT_OPTION else f"https://{config['site']}"
@@ -490,10 +465,12 @@ def map_token_line_item(instance_id):
     customer_name = customer_name_entry.get().strip()
     token_number = token_number_entry.get().strip()
     start_date = start_date_label.cget("text")
+    print("start date:", start_date)
     end_date = end_date_label.cget("text")
+    print("end date:", end_date)
     selected_rate_table = rate_table_var.get()
-    start_epoch = convert_date_to_epoch(start_date + " 00:00:00")
-    end_epoch = convert_date_to_epoch(end_date + " 23:59:59")
+    start_epoch = convert_date_to_epoch(start_date)
+    end_epoch = convert_date_to_epoch(end_date)
     
     # Call API
     # Determine API URL
@@ -696,25 +673,17 @@ def get_customer_line_items():
     else:
         messagebox.showerror("Error", f"Failed to get line items: {response.status_code}")
 
+import ttkbootstrap as ttkb
+from ttkbootstrap.dialogs import DatePickerDialog
+
+import ttkbootstrap as ttkb
+from ttkbootstrap.dialogs import DatePickerDialog
+
 def open_calendar(label):
-    def set_date():
-        selected_date = cal.selection_get().strftime('%Y-%m-%d')
-        label.config(text=selected_date)
-        top.destroy()
-    
-    top = Toplevel(root)
-    top.title("Select Date")
-    top.geometry(f"{400}x{420}+{x+80}+{y+70}")
-    today = datetime.date.today()
-    # now = datetime.datetime.now()  # Get the current time
-    cal = Calendar(top, font="Arial 14", selectmode='day', cursor="hand1",
-                   year=today.year, month=today.month, day=today.day, 
-                   background='lightgreen', foreground='black',
-                   bordercolor='gray', headersbackground='gray',
-                   normalbackground='white', weekendbackground='lightgray', 
-                   selectbackground='blue')
-    cal.pack(pady=10)
-    ttk.Button(top, text="Select", command=set_date).pack()
+    """ Opens a date picker and updates the given label with the selected date. """
+    date_picker = DatePickerDialog()
+    selected_date = date_picker.date_selected
+    label.config(text=selected_date)
 
 # Create the main application window
 root = tk.Tk()
@@ -758,7 +727,7 @@ ttk.Button(rate_table_tab, text="Get All Rate Tables", command=get_rate_tables, 
 ttk.Button(rate_table_tab, text="Get Current/Future Tables", command=lambda: get_rate_tables(filtered=True), padding=(5, 7), width=button_width).place(x=10, y=170)
 increment_version_button = ttk.Button(rate_table_tab, text="Increment Series Version", command=increment_version, padding=(5, 7), width=button_width, state=tk.DISABLED)
 increment_version_button.place(x=10, y=220)
-date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=select_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
+date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=rate_table_start_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
 date_button.place(x=10, y=270)
 
 post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
