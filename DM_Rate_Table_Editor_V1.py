@@ -156,8 +156,8 @@ def get_rate_tables(filtered=False):
             series_window = Toplevel(root)
             series_window.title("Existing Rate Tables")
             window_width = 520  # Adjust as necessary
-            window_height = 550  # Adjust as necessary
-            series_window.geometry(f"{window_width}x{window_height}+{x+170}+{y+60}")
+            window_height = 730  # Adjust as necessary
+            series_window.geometry(f"{window_width}x{window_height}+{x+250}+{y+100}")
 
             series_label = tk.Label(series_window, text="Select a Rate Table Series and Version:", padx=0, pady=5)
             series_label.pack()
@@ -686,11 +686,12 @@ def open_calendar(label):
     label.config(text=selected_date)
 
 # Create the main application window
-root = tk.Tk()
+root = ttkb.Window(themename="cosmo")
+#root = tk.Tk()
 root.title("Revenera Dynamic Monetization Standalone Tool")
 
 # Set window size and position
-window_width, window_height = 770, 720
+window_width, window_height = 1000, 950
 screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
@@ -730,8 +731,11 @@ increment_version_button.place(x=10, y=220)
 date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=rate_table_start_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
 date_button.place(x=10, y=270)
 
+
+
 post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
-post_site_button.place(x=590, y=170)
+post_site_button.place(x=780, y=220)
+
 
 # Text Area for Rate Table
 main_text_area = Text(rate_table_tab, wrap="word", height=30, width=50)
@@ -741,12 +745,17 @@ main_text_area.pack()
 result_label = tk.Label(rate_table_tab, text="", font=("Arial", 10, "bold"))
 result_label.pack(pady=10)
 
-# User Guide and API Reference Buttons
-ttk.Button(rate_table_tab, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).place(x=10, y=645)
-ttk.Button(rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=button_width).place(x=220, y=645)
+# Create a frame for bottom buttons
+bottom_frame = ttk.Frame(rate_table_tab)
+bottom_frame.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
 
-# Exit Button
-ttk.Button(rate_table_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
+# User Guide and API Reference Buttons
+ttk.Button(bottom_frame, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
+ttk.Button(bottom_frame, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
+
+# Place the "Exit" button on the bottom right
+exit_button = ttk.Button(bottom_frame, text="Exit", command=root.quit, padding=(5, 5))
+exit_button.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
 
 # Tenant label (Upper Left at x=30, y=10)
 ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
