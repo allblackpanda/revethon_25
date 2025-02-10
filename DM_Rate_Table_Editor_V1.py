@@ -176,7 +176,7 @@ def get_rate_tables(filtered=False):
             series_option = tk.OptionMenu(series_window, series_var, *series_options, command=lambda _: show_series())
             series_option.pack()
 
-            series_text_area = Text(series_window, wrap="word", height=25, width=50)
+            series_text_area = Text(series_window, wrap="word", height=8, width=50)
             series_text_area.pack(side="top", fill="both", expand=True)
 
             def format_date(date_str):
@@ -697,7 +697,7 @@ root = ttkb.Window(themename="cosmo")
 root.title("Revenera Dynamic Monetization Standalone Tool")
 
 # Set window size and position
-window_width, window_height = 1000, 950
+window_width, window_height = 1100, 800
 screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
@@ -727,7 +727,7 @@ radio_frame.pack(side="top", anchor="nw", pady=30)
 tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
 tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack(side="left", padx=10)
 # Tenant label
-ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
+ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=8)
 
 # Buttons for Rate Table Actions
 button_width = 23
@@ -742,11 +742,11 @@ date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=r
 date_button.place(x=10, y=270)
 
 post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
-post_site_button.place(x=780, y=220)
+post_site_button.place(x=810, y=220)
 
 # Text Area for Rate Table
-main_text_area = Text(rate_table_tab, wrap="word", height=30, width=50)
-main_text_area.pack()
+main_text_area = Text(rate_table_tab, wrap="word", height=20, width=50)
+main_text_area.pack(padx=280)
 
 # Result Label
 result_label = tk.Label(rate_table_tab, text="", font=("Arial", 10, "bold"))
@@ -776,7 +776,7 @@ exit_button3.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-righ
 
 
 # Tenant label (Upper Left at x=30, y=10)
-ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
+ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=8)
 
 # Radio Buttons for Environment Selection (Moved to x=30, y=40, Left Side)
 radio_frame = tk.Frame(customer_entitlements_tab)
@@ -852,7 +852,7 @@ map_label = ttk.Label(create_frame, text="", wraplength=400)
 map_label.pack()
 
 # Tenant label (Upper Left at x=30, y=10)
-ttk.Label(existing_customer_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
+ttk.Label(existing_customer_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=8)
 
 # Radio Buttons for Environment Selection (Updated)
 radio_frame = tk.Frame(existing_customer_tab)
