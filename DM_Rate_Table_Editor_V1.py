@@ -156,7 +156,7 @@ def get_rate_tables(filtered=False):
             series_window = Toplevel(root)
             series_window.title("Existing Rate Tables")
             window_width = 520  # Adjust as necessary
-            window_height = 730  # Adjust as necessary
+            window_height = 550  # Adjust as necessary
             series_window.geometry(f"{window_width}x{window_height}+{x+250}+{y+100}")
 
             series_label = tk.Label(series_window, text="Select a Rate Table Series and Version:", padx=0, pady=5)
