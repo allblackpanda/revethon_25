@@ -18,7 +18,7 @@ import ttkbootstrap as ttkb
 from ttkbootstrap.dialogs import DatePickerDialog
 
 UAT_OPTION = "-uat"
-
+PERMANENT_EPOCH = 253402300799999
 #Global example rate table
 EXAMPLE_RATE_TABLE = [{
     "effectiveFrom": "",
@@ -426,6 +426,26 @@ def register_customer():
     }
 
     try:
+        #check to see if the customer already exists
+        query_params = {
+            "accountId": customer_id,
+            "default": True
+        }
+
+        check_exists_response = requests.get(url=url,headers=headers,params=query_params)
+        if check_exists_response.status_code in [200, 201]:
+            exists_data = check_exists_response.json().get("content")
+            if len(exists_data) > 0:
+                customer_instance_id = exists_data[0].get("id")
+
+                # Ask if you want to continue
+                confirm_continue = messagebox.askyesno("Customer Exists: ", f"{customer_id} Already Exists. Would you like to continue mapping tokens anyway?")
+                if confirm_continue:
+                    return customer_instance_id
+                else:
+                    return 0 #Zero means customer exists
+
+
         response = requests.post(url, headers=headers, json=payload)
 
         if response.status_code in [200, 201]:
@@ -472,12 +492,16 @@ def map_token_line_item(instance_id):
     customer_name = customer_name_entry.get().strip()
     token_number = token_number_entry.get().strip()
     start_date = start_date_label.cget("text")
-    print("start date:", start_date)
+    # print("start date:", start_date)
     end_date = end_date_label.cget("text")
-    print("end date:", end_date)
+    # print("end date:", end_date)
     selected_rate_table = rate_table_var.get()
     start_epoch = convert_date_to_epoch(start_date)
-    end_epoch = convert_date_to_epoch(end_date)
+    
+    if end_date == "PERMANENT":
+        end_epoch = PERMANENT_EPOCH
+    else:
+        end_epoch = convert_date_to_epoch(end_date)
     
     # Call API
     # Determine API URL
@@ -524,14 +548,14 @@ def create_and_map_customer():
     start_date = start_date_label.cget("text")
     end_date = end_date_label.cget("text")
     selected_rate_table = rate_table_var.get()
+    isPermanent = permanent_var.get()
     if not customer_id or not token_number or not start_date or not end_date or not selected_rate_table or end_date =="Select End Date" or start_date == "Select Start Date":
         messagebox.showerror("All fields are required")
         return
     else:
-        # We want to modify register customer to check if the accountId already exists and has a default instance. 
-        # If it comes back, don't create a new customer instance. Instead proceed to map the token line item
         elastic_instance_id = register_customer()
-        map_token_line_item(elastic_instance_id)
+        if elastic_instance_id != 0: #if it's 0 that means customer exists
+            map_token_line_item(elastic_instance_id)
 
 
 def on_existing_customers_tab_selected(event):
@@ -632,7 +656,7 @@ def get_customer_line_items():
             start_epoch = item.get("start", 0)
             start_date = convert_epoch_to_date(start_epoch)[:10]  # Extract YYYY-MM-DD
             end_epoch = item.get("end", "")
-            end_date = "Permanent" if end_epoch == 253402300799999 else convert_epoch_to_date(end_epoch)[:10]  # Extract YYYY-MM-DD
+            end_date = "Permanent" if end_epoch == PERMANENT_EPOCH else convert_epoch_to_date(end_epoch)[:10]  # Extract YYYY-MM-DD
             quantity = item.get("quantity", "N/A")
             used = round(float(item.get("used", 0)), 1)  # Round Used to 1 decimal place
 
@@ -819,34 +843,62 @@ def validate_token_input(P):
 
 vcmd = (entry_frame.register(validate_token_input), "%P")
 
+# Function to toggle the date fields based on checkbox state
+def toggle_permanent():
+    if permanent_var.get():
+        end_date_btn.config(state=tk.DISABLED)
+        end_date_label.config(text="PERMANENT")
+    else:
+        end_date_btn.config(state=tk.NORMAL)
+        end_date_label.config(text="Select End Date")
+
 token_number_entry = ttk.Entry(entry_frame, width=30, font=("Arial", 10, "normal"), validate="key", validatecommand=vcmd)
 token_number_entry.pack(side="left", padx=5)
 
+permanent_check_frame = tk.Frame(customer_entitlements_tab)
+permanent_check_frame.place(x=30, y=250) 
+
+# Permanent Checkbox
+permanent_var = tk.BooleanVar()
+permanent_checkbox = ttk.Checkbutton(permanent_check_frame, text="Permanent", variable=permanent_var, command=toggle_permanent)
+permanent_checkbox.pack(side="left", padx=10)
+
 start_date_frame = tk.Frame(customer_entitlements_tab)
-start_date_frame.place(x=30, y=230) 
+start_date_frame.place(x=30, y=290) 
 
 ttk.Label(start_date_frame, text="Start Date:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
 
-start_date_label = ttk.Label(start_date_frame, text="Select Start Date", background="lightgray", font=("Arial", 10, "normal"), width=15)
+#default start date
+def get_default_date():
+    today = datetime.datetime.today()
+    today = datetime.datetime.now()
+    year = today.year
+    month = today.strftime("%m")
+    day = today.strftime("%d")
+    return f"{year}-{month}-{day}"
+
+start_date_label = ttk.Label(start_date_frame, text=get_default_date(), background="lightgray", font=("Arial", 10, "normal"), width=15)
 start_date_label.pack(side="left", padx=5)
 
-ttk.Button(start_date_frame, text="Pick Date", command=lambda: open_calendar(start_date_label)).pack(side="left", padx=5)
+start_date_btn = ttk.Button(start_date_frame, text="Pick Date", command=lambda: open_calendar(start_date_label))
+start_date_btn.pack(side="left", padx=5)
 
 end_date_frame = tk.Frame(customer_entitlements_tab)
-end_date_frame.place(x=30, y=280) 
+end_date_frame.place(x=30, y=380) 
 
 ttk.Label(end_date_frame, text="End Date:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
 
 end_date_label = ttk.Label(end_date_frame, text="Select End Date", background="lightgray", font=("Arial", 10, "normal"), width=15)
 end_date_label.pack(side="left", padx=9)
 
-ttk.Button(end_date_frame, text="Pick Date", command=lambda: open_calendar(end_date_label)).pack(side="left", padx=5)
+end_date_btn = ttk.Button(end_date_frame, text="Pick Date", command=lambda: open_calendar(end_date_label))
+end_date_btn.pack(side="left", padx=5)
 
 create_frame = tk.Frame(customer_entitlements_tab)
-create_frame.place(x=30, y=330)
+create_frame.place(x=30, y=470)
 
 generate_button = ttk.Button(create_frame, text="Create & Entitle Customer", command=create_and_map_customer, padding=(5, 7), width=28)
-generate_button.pack(padx=10)
+generate_button.pack(padx=10, pady=70)
 
 map_label = ttk.Label(create_frame, text="", wraplength=400)
 map_label.pack()
