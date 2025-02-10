@@ -694,7 +694,6 @@ def open_calendar(label):
 
 # Create the main application window
 root = ttkb.Window(themename="cosmo")
-#root = tk.Tk()
 root.title("Revenera Dynamic Monetization Standalone Tool")
 
 # Set window size and position
@@ -714,6 +713,10 @@ notebook.add(rate_table_tab, text="Rate Table Generator", padding= 5)
 # Create "Customer Entitlements" tab
 customer_entitlements_tab = ttk.Frame(notebook)
 notebook.add(customer_entitlements_tab, text="Entitle New Customers", padding= 5)
+
+# Create "Manage Existing Customers" tab
+existing_customer_tab = ttk.Frame(notebook)
+notebook.add(existing_customer_tab, text="Manage Existing Customers", padding=5)
 
 # UI Components for "Rate Table Generator" tab
 env_var = tk.StringVar(value=UAT_OPTION)
@@ -738,11 +741,8 @@ increment_version_button.place(x=10, y=220)
 date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=rate_table_start_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
 date_button.place(x=10, y=270)
 
-
-
 post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
 post_site_button.place(x=780, y=220)
-
 
 # Text Area for Rate Table
 main_text_area = Text(rate_table_tab, wrap="word", height=30, width=50)
@@ -753,16 +753,27 @@ result_label = tk.Label(rate_table_tab, text="", font=("Arial", 10, "bold"))
 result_label.pack(pady=10)
 
 # Create a frame for bottom buttons
-bottom_frame = ttk.Frame(rate_table_tab)
-bottom_frame.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
+bottom_frame_rate_table_tab = ttk.Frame(rate_table_tab)
+bottom_frame_rate_table_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
+bottom_frame_customer_entitlements_tab = ttk.Frame(customer_entitlements_tab)
+bottom_frame_customer_entitlements_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
+bottom_frame_existing_customer_tab = ttk.Frame(existing_customer_tab)
+bottom_frame_existing_customer_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
+
 
 # User Guide and API Reference Buttons
-ttk.Button(bottom_frame, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
-ttk.Button(bottom_frame, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
+ttk.Button(bottom_frame_rate_table_tab, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
+ttk.Button(bottom_frame_rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
 
 # Place the "Exit" button on the bottom right
-exit_button = ttk.Button(bottom_frame, text="Exit", command=root.quit, padding=(5, 5))
-exit_button.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
+exit_button1 = ttk.Button(bottom_frame_rate_table_tab, text="Exit", command=root.quit, padding=(20, 5))
+exit_button1.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
+exit_button2 = ttk.Button(bottom_frame_customer_entitlements_tab, text="Exit", command=root.quit, padding=(20, 5))
+exit_button2.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
+exit_button3 = ttk.Button(bottom_frame_existing_customer_tab, text="Exit", command=root.quit, padding=(20, 5))
+exit_button3.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
+
+
 
 # Tenant label (Upper Left at x=30, y=10)
 ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
@@ -840,13 +851,6 @@ generate_button.pack(padx=10)
 map_label = ttk.Label(create_frame, text="", wraplength=400)
 map_label.pack()
 
-# Exit Button (Bottom Right)
-ttk.Button(customer_entitlements_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
-
-# Create "Manage Existing Customers" tab
-existing_customer_tab = ttk.Frame(notebook)
-notebook.add(existing_customer_tab, text="Manage Existing Customers", padding=5)
-
 # Tenant label (Upper Left at x=30, y=10)
 ttk.Label(existing_customer_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=10)
 
@@ -880,9 +884,6 @@ ttk.Label(existing_customer_tab, text="").pack()
 ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
 line_items_text = Text(existing_customer_tab, wrap="word", height=25, width=85)
 line_items_text.pack()
-
-# Exit Button (Bottom Right)
-ttk.Button(existing_customer_tab, text="Exit", command=root.quit, padding=(5, 5)).place(x=660, y=645)
 
 # Fetch and display logo
 logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
