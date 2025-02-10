@@ -179,20 +179,27 @@ def get_rate_tables(filtered=False):
             series_text_area = Text(series_window, wrap="word", height=25, width=50)
             series_text_area.pack(side="top", fill="both", expand=True)
 
+            def format_date(date_str):
+                return date_str.split()[0] if date_str else ""
+
             def show_series():
                 selected_series_version = series_var.get()
                 selected_series, selected_version = selected_series_version.split(" - v")
-                series_data = [item for item in sorted_series if item.get('series', '') == selected_series and str(item.get('version', 'N/A')) == selected_version]
-                
+                series_data = [
+                    item for item in sorted_series 
+                    if item.get('series', '') == selected_series and str(item.get('version', 'N/A')) == selected_version
+    ]
                 if series_data:
                     series_info = series_data[0]
+                    series_info['effectiveFrom'] = format_date(series_info.get('effectiveFrom', ''))
+                    series_info['created'] = format_date(series_info.get('created', ''))
                     formatted_output = (
                         f"Series Name:\t\t{series_info.get('series', '')}\n"
                         f"Series Version:\t\t{series_info.get('version', '')}\n\n"
-                        f"   Start Date:\t\t{series_info.get('effectiveFrom', '')}\n"
-                        f" Created Date:\t\t{series_info.get('created', '')}\n\n"
+                        f"Start Date:\t\t{series_info.get('effectiveFrom', '')}\n"
+                        f"Created Date:\t\t{series_info.get('created', '')}\n\n"
                         f"{'Item Name'}\t\t\t{'Version'}\t\t{'Rate'}\n"
-                        f"{'-'*45}\n"
+                        f"{'-'*65}\n"
                     )
                     
                     for item in series_info.get("items", []):
@@ -284,7 +291,7 @@ def increment_version():
         if line.lstrip().startswith("Series Version:"):
             leading_spaces = len(line) - len(line.lstrip())
             version_number = int(line.split("\t")[-1]) + 1 if line.split("\t")[-1].isdigit() else 1
-            updated_text += " " * leading_spaces + f"Series Version:\t{version_number}\n"
+            updated_text += " " * leading_spaces + f"Series Version:\t\t{version_number}\n"
         else:
             updated_text += line + "\n"
     
@@ -306,7 +313,7 @@ def rate_table_start_date():
         for line in text_data.split("\n"):
             if line.lstrip().startswith("Start Date:"):
                 leading_spaces = len(line) - len(line.lstrip())
-                updated_text += " " * leading_spaces + f"Start Date: \t{selected_date}\n"
+                updated_text += " " * leading_spaces + f"Start Date:\t\t{selected_date}\n"
             else:
                 updated_text += line + "\n"
         
