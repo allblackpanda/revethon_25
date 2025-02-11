@@ -12,9 +12,6 @@ import webbrowser
 import re
 import uuid
 from io import BytesIO
-import pandas as pd
-import os
-import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import ttkbootstrap as ttkb
 from ttkbootstrap.dialogs import DatePickerDialog
@@ -69,7 +66,19 @@ def start_reporting():
     def open_browser():
         import time
         time.sleep(3)
-        webbrowser.get("chrome").open(REPORTING_APP_URL)
+        try:
+            chrome_path = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+            webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
+            webbrowser.get("chrome").open(REPORTING_APP_URL)
+
+        except webbrowser.Error:
+            try:
+                chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
+                webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
+                webbrowser.get("chrome").open(REPORTING_APP_URL)
+            except webbrowser.Error as e:
+                messagebox.showerror("Error: ",str(e))
+
     
     threading.Thread(target=open_browser, daemon=True).start()
 
