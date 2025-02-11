@@ -8,3 +8,5 @@ xlrd
 xlwt
 gspread
 oauth2client
+dash
+plotly

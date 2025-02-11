@@ -6,6 +6,8 @@ import time
 import requests
 import json
 import datetime
+import subprocess
+import threading
 import webbrowser
 import re
 import uuid
@@ -18,6 +20,7 @@ import ttkbootstrap as ttkb
 from ttkbootstrap.dialogs import DatePickerDialog
 
 UAT_OPTION = "-uat"
+REPORTING_APP_URL = "http://127.0.0.1:8050/"
 PERMANENT_EPOCH = 253402300799999
 #Global example rate table
 EXAMPLE_RATE_TABLE = [{
@@ -56,7 +59,21 @@ def convert_epoch_to_date(epoch_ms):
         return datetime.datetime.fromtimestamp(epoch_sec).strftime('%Y-%m-%d %H:%M:%S')
     except ValueError:
         return "Invalid Date"
+
+# Function to start Reporting.py in the background
+def start_reporting():
+    messagebox.showinfo("Starting Reporter: ", f"Starting the reporter application and opening browser. It may take a couple of seconds.")
+
+    subprocess.Popen(["python", "Reporting.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Open Chrome after a short delay to ensure the server starts
+    def open_browser():
+        import time
+        time.sleep(3)
+        webbrowser.get("chrome").open(REPORTING_APP_URL)
     
+    threading.Thread(target=open_browser, daemon=True).start()
+
+
 #def convert_date_to_epoch(date_str, date_format='%Y-%m-%d %H:%M:%S'):
 def convert_date_to_epoch(date_str, date_format='%Y-%m-%d'):
     try:
@@ -788,6 +805,9 @@ bottom_frame_existing_customer_tab.pack(side="bottom", fill="x", pady=10)  # Anc
 # User Guide and API Reference Buttons
 ttk.Button(bottom_frame_rate_table_tab, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
 ttk.Button(bottom_frame_rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
+# Create a new button in bottom_frame_existing_customer_tab
+reporting_button = ttk.Button(bottom_frame_rate_table_tab, text="Open Reporting Dashboard", command=start_reporting, padding=(5, 7))
+reporting_button.pack(side="left", padx=10, pady=5)
 
 # Place the "Exit" button on the bottom right
 exit_button1 = ttk.Button(bottom_frame_rate_table_tab, text="Exit", command=root.quit, padding=(20, 5))
