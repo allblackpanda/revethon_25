@@ -556,14 +556,14 @@ def on_existing_customers_tab_selected(event):
         selected_account_var.set("")  # Clear selection if no customers exist
 
 def on_env_change():
-    """Reload customer names and clear the line items display when the environment selection changes."""
+    """Reload customer names and refresh rate table dropdown when the environment selection changes."""
     global customer_data
     customer_data = load_customer_names()  # Reload customer list
 
     # Update the customer dropdown
     customer_dropdown["values"] = [c["accountId"] for c in customer_data]
     if customer_data:
-        selected_account_var.set(customer_data[0]["accountId"])  # Set the first option
+        selected_account_var.set(customer_data[0]["accountId"])  # Set first option
     else:
         selected_account_var.set("")  # Clear selection if no data
 
@@ -571,6 +571,16 @@ def on_env_change():
     line_items_text.config(state="normal")
     line_items_text.delete("1.0", "end")
     line_items_text.config(state="disabled")
+
+    # **Refresh Rate Tables on Customer Entitlements Tab**
+    new_rate_table_list = get_rate_tables_names()
+
+    if new_rate_table_list:
+        rate_table_dropdown["values"] = new_rate_table_list  # Update dropdown values
+        rate_table_var.set(new_rate_table_list[0])  # Set first value as default
+    else:
+        rate_table_dropdown["values"] = []  # Clear dropdown if no data
+        rate_table_var.set("")  # Reset selection
 
 def load_customer_names():
     """Loads customer names from the API."""
@@ -786,8 +796,9 @@ ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Ar
 radio_frame = tk.Frame(customer_entitlements_tab)
 radio_frame.pack(side="top", anchor="nw", pady=30)
 
-tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
-tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production", command=on_env_change).pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION, command=on_env_change).pack(side="left", padx=10)
+
 
 # Create a frame for better layout management
 customer_frame = tk.Frame(customer_entitlements_tab)
@@ -827,21 +838,13 @@ vcmd = (entry_frame.register(validate_token_input), "%P")
 def toggle_permanent():
     if permanent_var.get():
         end_date_btn.config(state=tk.DISABLED)
-        end_date_label.config(text="PERMANENT")
+        end_date_label.config(text="Permanent")
     else:
         end_date_btn.config(state=tk.NORMAL)
         end_date_label.config(text="Select End Date")
 
 token_number_entry = ttk.Entry(entry_frame, width=30, font=("Arial", 10, "normal"), validate="key", validatecommand=vcmd)
 token_number_entry.pack(side="left", padx=5)
-
-permanent_check_frame = tk.Frame(customer_entitlements_tab)
-permanent_check_frame.place(x=30, y=250) 
-
-# Permanent Checkbox
-permanent_var = tk.BooleanVar()
-permanent_checkbox = ttk.Checkbutton(permanent_check_frame, text="Permanent", variable=permanent_var, command=toggle_permanent)
-permanent_checkbox.pack(side="left", padx=10)
 
 start_date_frame = tk.Frame(customer_entitlements_tab)
 start_date_frame.place(x=30, y=290) 
@@ -873,6 +876,11 @@ end_date_label.pack(side="left", padx=9)
 
 end_date_btn = ttk.Button(end_date_frame, text="Pick Date", command=lambda: open_calendar(end_date_label))
 end_date_btn.pack(side="left", padx=5)
+
+# Permanent Checkbox
+permanent_var = tk.BooleanVar()
+permanent_checkbox = ttk.Checkbutton(end_date_frame, text="Permanent", variable=permanent_var, command=toggle_permanent)
+permanent_checkbox.pack(side="left", padx=10)
 
 create_frame = tk.Frame(customer_entitlements_tab)
 create_frame.place(x=30, y=470)
