@@ -887,21 +887,13 @@ vcmd = (entry_frame.register(validate_token_input), "%P")
 def toggle_permanent():
     if permanent_var.get():
         end_date_btn.config(state=tk.DISABLED)
-        end_date_label.config(text="PERMANENT")
+        end_date_label.config(text="Permanent")
     else:
         end_date_btn.config(state=tk.NORMAL)
         end_date_label.config(text="Select End Date")
 
 token_number_entry = ttk.Entry(entry_frame, width=30, font=("Arial", 10, "normal"), validate="key", validatecommand=vcmd)
 token_number_entry.pack(side="left", padx=5)
-
-permanent_check_frame = tk.Frame(customer_entitlements_tab)
-permanent_check_frame.place(x=30, y=250) 
-
-# Permanent Checkbox
-permanent_var = tk.BooleanVar()
-permanent_checkbox = ttk.Checkbutton(permanent_check_frame, text="Permanent", variable=permanent_var, command=toggle_permanent)
-permanent_checkbox.pack(side="left", padx=10)
 
 start_date_frame = tk.Frame(customer_entitlements_tab)
 start_date_frame.place(x=30, y=290) 
@@ -933,6 +925,11 @@ end_date_label.pack(side="left", padx=9)
 
 end_date_btn = ttk.Button(end_date_frame, text="Pick Date", command=lambda: open_calendar(end_date_label))
 end_date_btn.pack(side="left", padx=5)
+
+# Permanent Checkbox
+permanent_var = tk.BooleanVar()
+permanent_checkbox = ttk.Checkbutton(end_date_frame, text="Permanent", variable=permanent_var, command=toggle_permanent)
+permanent_checkbox.pack(side="left", padx=10)
 
 create_frame = tk.Frame(customer_entitlements_tab)
 create_frame.place(x=30, y=470)
