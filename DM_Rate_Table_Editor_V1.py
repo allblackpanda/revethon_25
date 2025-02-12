@@ -19,30 +19,21 @@ from ttkbootstrap.dialogs import DatePickerDialog
 UAT_OPTION = "-uat"
 REPORTING_APP_URL = "http://127.0.0.1:8050/"
 PERMANENT_EPOCH = 253402300799999
-#Global example rate table
+
+# Global example rate table
 EXAMPLE_RATE_TABLE = [{
     "effectiveFrom": "",
     "series": "NewSeries",
     "version": "1",
     "items": [
-        {
-            "name": "Intermediate",
-            "version": "1.0",
-            "rate": 7.0},
-        {
-            "name": "Basic",
-            "version": "1.0",
-            "rate": 5.0
-        },
-        {
-            "name": "Advanced",
-            "version": "1.0",
-            "rate": 10.0
-        }
+        {"name": "Intermediate", "version": "1.0", "rate": 7.0},
+        {"name": "Basic", "version": "1.0", "rate": 5.0},
+        {"name": "Advanced", "version": "1.0", "rate": 10.0}
     ]
 }]
 
 def read_config():
+    """Reads configuration from a file and returns it as a dictionary."""
     config = {}
     with open("config.txt", "r") as file:
         for line in file:
@@ -51,40 +42,36 @@ def read_config():
     return config
 
 def convert_epoch_to_date(epoch_ms):
+    """Converts epoch time in milliseconds to a human-readable date string."""
     try:
         epoch_sec = int(epoch_ms) / 1000  # Convert milliseconds to seconds
         return datetime.datetime.fromtimestamp(epoch_sec).strftime('%Y-%m-%d %H:%M:%S')
     except ValueError:
         return "Invalid Date"
 
-# Function to start Reporting.py in the background
 def start_reporting():
-    messagebox.showinfo("Starting Reporter: ", f"Starting the reporter application and opening browser. It may take a couple of seconds.")
-
+    """Starts the Reporting.py script in the background and opens the reporting dashboard in Chrome."""
+    messagebox.showinfo("Starting Reporter", "Starting the reporter application and opening browser. It may take a couple of seconds.")
     subprocess.Popen(["python", "Reporting.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    # Open Chrome after a short delay to ensure the server starts
+
     def open_browser():
-        import time
         time.sleep(3)
         try:
             chrome_path = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
             webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
             webbrowser.get("chrome").open(REPORTING_APP_URL)
-
         except webbrowser.Error:
             try:
                 chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
                 webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
                 webbrowser.get("chrome").open(REPORTING_APP_URL)
             except webbrowser.Error as e:
-                messagebox.showerror("Error: ",str(e))
+                messagebox.showerror("Error", str(e))
 
-    
     threading.Thread(target=open_browser, daemon=True).start()
 
-
-#def convert_date_to_epoch(date_str, date_format='%Y-%m-%d %H:%M:%S'):
 def convert_date_to_epoch(date_str, date_format='%Y-%m-%d'):
+    """Converts a date string to epoch time in milliseconds."""
     try:
         if not date_str:  # Handle empty strings
             return 0  # Default to epoch 0 (Jan 1, 1970)
@@ -93,9 +80,8 @@ def convert_date_to_epoch(date_str, date_format='%Y-%m-%d'):
     except ValueError:
         return 0  # Default to an old epoch time if parsing fails
 
-
-# Filter out historic tables and only return the latest versions active and any future tables
 def filter_series(input_series):
+    """Filters out historic rate tables and returns only the latest versions and future tables."""
     current_epoch = int(time.time()) * 1000
     latest_versions = {}
     total_series = []
@@ -120,7 +106,7 @@ def filter_series(input_series):
     return total_series
 
 def get_rate_tables(filtered=False):
-    #print(f'Button selected is',UAT_OPTION)
+    """Fetches rate tables from the API and displays them in a new window."""
     if env_var.get() == UAT_OPTION:
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
     else:
@@ -135,28 +121,7 @@ def get_rate_tables(filtered=False):
         data = response.json()
         if not data:
             messagebox.showinfo("Info", "No Rate Tables Exist, loading an example Rate Table")
-            data = [{
-                "effectiveFrom": "",
-                "series": "NewSeries",
-                "version": "1",
-                "items": [
-                    {
-                        "name": "Intermediate",
-                        "version": "1.0",
-                        "rate": 7.0
-                    },
-                    {
-                        "name": "Basic",
-                        "version": "1.0",
-                        "rate": 5.0
-                    },
-                    {
-                        "name": "Advanced",
-                        "version": "1.0",
-                        "rate": 10.0
-                    }
-                ]
-            }]
+            data = [EXAMPLE_RATE_TABLE]
         if isinstance(data, list):
             data.sort(key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
 
@@ -167,7 +132,7 @@ def get_rate_tables(filtered=False):
                 if 'created' in rate_table and rate_table['created']:
                     rate_table['created'] = convert_epoch_to_date(rate_table['created'])
 
-            # **Apply filtering if button was clicked**
+            # Apply filtering if button was clicked
             if filtered:
                 data = filter_series(data)
 
@@ -206,15 +171,17 @@ def get_rate_tables(filtered=False):
             series_text_area.pack(side="top", fill="both", expand=True)
 
             def format_date(date_str):
+                """Formats a date string to only include the date part."""
                 return date_str.split()[0] if date_str else ""
 
             def show_series():
+                """Displays the selected rate table series and version in the text area."""
                 selected_series_version = series_var.get()
                 selected_series, selected_version = selected_series_version.split(" - v")
                 series_data = [
                     item for item in sorted_series 
                     if item.get('series', '') == selected_series and str(item.get('version', 'N/A')) == selected_version
-    ]
+                ]
                 if series_data:
                     series_info = series_data[0]
                     series_info['effectiveFrom'] = format_date(series_info.get('effectiveFrom', ''))
@@ -239,6 +206,7 @@ def get_rate_tables(filtered=False):
                     series_text_area.config(state="disabled")
 
             def copy_to_main():
+                """Copies the selected rate table series to the main text area."""
                 text_data = series_text_area.get("1.0", "end").strip()  # Remove leading whitespace from entire text
 
                 # Remove lines starting with "Created Date" (ignoring leading whitespace)
@@ -259,6 +227,7 @@ def get_rate_tables(filtered=False):
                 series_window.destroy()
 
             def delete_rate_table():
+                """Deletes the selected rate table series and version."""
                 selected_series_version = series_var.get()
                 selected_series, selected_version = selected_series_version.split(" - v")
                 
@@ -278,15 +247,14 @@ def get_rate_tables(filtered=False):
                     series_window.destroy()
                 else:
                     if response.status_code == 409:
-                        messagebox.showwarning("Warning", f"Rate Table is already in effect and cannot be deleted")
+                        messagebox.showwarning("Warning", "Rate Table is already in effect and cannot be deleted")
                         series_window.lift()  # Keep window in focus
                         series_window.focus_force()
     
-
         copy_button = tk.Button(series_window, text="Copy to Rate Table Editor", command=copy_to_main)
-        copy_button.pack(side="left", padx=25, pady= 10)
+        copy_button.pack(side="left", padx=25, pady=10)
         delete_button = tk.Button(series_window, text="Delete Rate Table", command=delete_rate_table, fg="red")
-        delete_button.pack(side = "left", padx=10, pady=10)
+        delete_button.pack(side="left", padx=10, pady=10)
         close_button = tk.Button(series_window, text="Close", command=series_window.destroy)
         close_button.pack(side="right", padx=10, pady=10)
 
@@ -294,13 +262,11 @@ def get_rate_tables(filtered=False):
     except FileNotFoundError:
         messagebox.showerror("Error", "No rate tables found.")
 
-import ttkbootstrap as ttkb
-from ttkbootstrap.dialogs import DatePickerDialog
-
 def select_date():
+    """Opens a date picker dialog to select a date."""
     top = ttkb.Toplevel()
     top.title("Select Date")
-    #top.geometry(f"{400}x{420}+{x+80}+{y+70}")
+#top.geometry(f"{400}x{420}+{x+80}+{y+70}")
 
     date_picker = DatePickerDialog(top)
 
@@ -328,6 +294,7 @@ def increment_version():
     result_label.config(text="Series Version incremented successfully")
 
 def rate_table_start_date():
+    """Opens a date picker dialog to select a start date for the rate table."""
     date_picker = DatePickerDialog()
     selected_date = date_picker.date_selected  # Corrected way to fetch selected date
     if selected_date:
@@ -403,30 +370,20 @@ def post_to_site():
             messagebox.showinfo("Success", "Rate Table posted successfully")
         else:
             if response.status_code == 409:
-                messagebox.showwarning("Warning", f"Rate Table with the specified Series and Version already exists")
+                messagebox.showwarning("Warning", "Rate Table with the specified Series and Version already exists")
     except Exception as e:
-        pass
         messagebox.showerror("Error", f"Failed to process data: {str(e)}")
 
 def open_user_guide():
+    """Opens the Dynamic Monetization User Guide in the default web browser."""
     webbrowser.open("https://docs.revenera.com/dm/dynamicmonetization_ug/Content/helplibrary/DMGettingStarted.htm")
+
 def open_api_ref():
+    """Opens the Rate Table API Reference in the default web browser."""
     webbrowser.open("https://fnoapi-dynamicmonetization.redoc.ly/#operation/getRateTables")
 
-def read_config():
-    config = {}
-    with open("config.txt", "r") as file:
-        for line in file:
-            key, value = line.strip().split(" = ")
-            config[key] = value
-    return config
-
-config = read_config()
-
-# Register Customer Function
 def register_customer():
-    """Registers a new customer using DAPI"""
-    
+    """Registers a new customer using DAPI."""
     customer_id = customer_id_entry.get().strip()
     customer_name = customer_name_entry.get().strip()
     
@@ -488,6 +445,7 @@ def register_customer():
         messagebox.showerror("Error", f"Request failed: {str(e)}")
 
 def get_rate_tables_names():
+    """Fetches the names of rate tables from the API."""
     if env_var.get() == UAT_OPTION:
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
     else:
@@ -509,18 +467,17 @@ def get_rate_tables_names():
     else:
         messagebox.showerror("Error", f"Failed to retrieve rate tables: {response.status_code}")
 
-
 def generate_uuid():
+    """Generates a new UUID."""
     return str(uuid.uuid4())
 
 # After Registering, map the token line items
 def map_token_line_item(instance_id):
+    """Maps token line items to a customer instance."""
     customer_name = customer_name_entry.get().strip()
     token_number = token_number_entry.get().strip()
     start_date = start_date_label.cget("text")
-    # print("start date:", start_date)
     end_date = end_date_label.cget("text")
-    # print("end date:", end_date)
     selected_rate_table = rate_table_var.get()
     start_epoch = convert_date_to_epoch(start_date)
     
@@ -569,6 +526,7 @@ def map_token_line_item(instance_id):
 
 # Register Customer Function
 def create_and_map_customer():
+    """Creates and maps a new customer."""
     customer_id = customer_id_entry.get().strip()
     token_number = token_number_entry.get().strip()
     start_date = start_date_label.cget("text")
@@ -582,7 +540,6 @@ def create_and_map_customer():
         elastic_instance_id = register_customer()
         if elastic_instance_id != 0: #if it's 0 that means customer exists
             map_token_line_item(elastic_instance_id)
-
 
 def on_existing_customers_tab_selected(event):
     """Update customer dropdown values when the 'Manage Existing Customers' tab is selected."""
@@ -616,6 +573,7 @@ def on_env_change():
     line_items_text.config(state="disabled")
 
 def load_customer_names():
+    """Loads customer names from the API."""
     customer_data = []
     
     if env_var.get() == UAT_OPTION:
@@ -645,8 +603,8 @@ def load_customer_names():
         messagebox.showerror("Error", f"Request failed: {str(e)}")
     return customer_data
 
-
 def get_customer_line_items():
+    """Fetches and displays line items for the selected customer."""
     selected_account_id = selected_account_var.get()
     selected_customer = next((c for c in customer_data if c["accountId"] == selected_account_id), None)
     
@@ -730,17 +688,13 @@ def get_customer_line_items():
     else:
         messagebox.showerror("Error", f"Failed to get line items: {response.status_code}")
 
-import ttkbootstrap as ttkb
-from ttkbootstrap.dialogs import DatePickerDialog
-
-import ttkbootstrap as ttkb
-from ttkbootstrap.dialogs import DatePickerDialog
-
 def open_calendar(label):
     """ Opens a date picker and updates the given label with the selected date. """
     date_picker = DatePickerDialog()
     selected_date = date_picker.date_selected
     label.config(text=selected_date)
+
+config = read_config()
 
 # Create the main application window
 root = ttkb.Window(themename="cosmo")
@@ -810,7 +764,6 @@ bottom_frame_customer_entitlements_tab.pack(side="bottom", fill="x", pady=10)  #
 bottom_frame_existing_customer_tab = ttk.Frame(existing_customer_tab)
 bottom_frame_existing_customer_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
 
-
 # User Guide and API Reference Buttons
 ttk.Button(bottom_frame_rate_table_tab, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
 ttk.Button(bottom_frame_rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
@@ -825,8 +778,6 @@ exit_button2 = ttk.Button(bottom_frame_customer_entitlements_tab, text="Exit", c
 exit_button2.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
 exit_button3 = ttk.Button(bottom_frame_existing_customer_tab, text="Exit", command=root.quit, padding=(20, 5))
 exit_button3.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
-
-
 
 # Tenant label (Upper Left at x=30, y=10)
 ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=8)
