@@ -37,9 +37,16 @@ def read_config():
     config = {}
     with open("config.txt", "r") as file:
         for line in file:
-            key, value = line.strip().split(" = ")
-            config[key] = value
+            line = line.strip()
+            if "=" in line:
+                key, value = line.split(" = ", 1)  # Ensure splitting only on the first occurrence
+                if key in ["accountid_exclude_uat", "accountid_exclude_prod"]:
+                    config[key] = value.split(",")  # Convert comma-separated values into a list
+                else:
+                    config[key] = value
     return config
+
+config = read_config()
 
 def convert_epoch_to_date(epoch_ms):
     """Converts epoch time in milliseconds to a human-readable date string."""
@@ -582,11 +589,16 @@ def on_env_change():
         rate_table_dropdown["values"] = []  # Clear dropdown if no data
         rate_table_var.set("")  # Reset selection
 
+config = read_config()
+
 def load_customer_names():
-    """Loads customer names from the API."""
+    """Loads customer names from the API, filtering out excluded account IDs."""
     customer_data = []
-    
-    if env_var.get() == UAT_OPTION:
+    env_option = env_var.get()
+    excluded_prefixes = config.get("accountid_exclude_uat" if env_option == UAT_OPTION else "accountid_exclude_prod", [])
+    excluded_prefixes = [prefix.lower() for prefix in excluded_prefixes]  # Ensure case-insensitive matching
+
+    if env_option == UAT_OPTION:
         url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
     else:
         url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
@@ -595,23 +607,32 @@ def load_customer_names():
         "Authorization": f"Bearer {config['jwt']}",
         "Content-Type": "application/json"
     }
-    
+
     try:
         response = requests.get(url, headers=headers)
         if response.status_code in [200, 201]:
             response_data = response.json()
             instances = response_data.get("content", [])
-        
-            # Store customer data in an array
-            customer_data = sorted([
-                {"accountId": entry["accountId"], "shortName": entry["shortName"], "id": entry["id"]} 
-                for entry in instances if entry.get("defaultInstance")
-            ], key=lambda x: x["accountId"]) # Sort by accountId
+            
+            for entry in instances:
+                account_id = entry.get("accountId", "").lower()
+                if any(account_id.startswith(prefix) for prefix in excluded_prefixes):
+                    continue  # Skip excluded accounts
+                
+                customer_data.append({
+                    "accountId": entry["accountId"],
+                    "shortName": entry["shortName"],
+                    "id": entry["id"]
+                })
+            
+            customer_data.sort(key=lambda x: x["accountId"], reverse=(env_option == UAT_OPTION))  # Sort descending for UAT
         else:
             messagebox.showerror("Error", f"Failed to get customer list: {response.status_code}\n{response.text}")
     except Exception as e:
         messagebox.showerror("Error", f"Request failed: {str(e)}")
+    
     return customer_data
+
 
 def get_customer_line_items():
     """Fetches and displays line items for the selected customer."""
@@ -748,8 +769,8 @@ button_width = 23
 
 # Add a new button to get filtered rate tables
 filter_var = tk.BooleanVar()
-ttk.Button(rate_table_tab, text="Get All Rate Tables", command=get_rate_tables, padding=(5, 7), width=button_width).place(x=10, y=120)
-ttk.Button(rate_table_tab, text="Get Current/Future Tables", command=lambda: get_rate_tables(filtered=True), padding=(5, 7), width=button_width).place(x=10, y=170)
+ttk.Button(rate_table_tab, text="Get Current/Future Tables", command=lambda: get_rate_tables(filtered=True), padding=(5, 7), width=button_width).place(x=10, y=120)
+ttk.Button(rate_table_tab, text="Get All Rate Tables", command=get_rate_tables, padding=(5, 7), width=button_width).place(x=10, y=170)
 increment_version_button = ttk.Button(rate_table_tab, text="Increment Series Version", command=increment_version, padding=(5, 7), width=button_width, state=tk.DISABLED)
 increment_version_button.place(x=10, y=220)
 date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=rate_table_start_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
