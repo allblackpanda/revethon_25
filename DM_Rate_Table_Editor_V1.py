@@ -736,6 +736,7 @@ window_width, window_height = 1100, 800
 screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
+root.iconbitmap("Revethon2025.ico")  
 
 # Create a Notebook (Tabbed Interface)
 notebook = ttk.Notebook(root)
