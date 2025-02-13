@@ -429,7 +429,7 @@ def register_customer():
                 customer_instance_id = exists_data[0].get("id")
 
                 # Ask if you want to continue
-                confirm_continue = messagebox.askyesno("Customer Exists: ", f"{customer_id} Already Exists. Would you like to continue mapping tokens anyway?")
+                confirm_continue = messagebox.askyesno("Customer Exists: ", f"Customer Account ID: {customer_id} Already Exists. Would you like to entitle additional tokens?")
                 if confirm_continue:
                     return customer_instance_id
                 else:
@@ -523,10 +523,10 @@ def map_token_line_item(instance_id):
         response = requests.put(url, headers=headers, data=json_payload)
 
         if response.status_code in [200, 201]:         
-            messagebox.showinfo("Success: ", f"{token_number} Tokens successfully mapped to: {customer_name}")
+            messagebox.showinfo("Success: ", f"{token_number} Tokens successfully entitled to: {customer_name}")
 
         else:
-            messagebox.showerror("Error", f"Failed to map tokens to customer: {response.status_code}\n{response.text}")
+            messagebox.showerror("Error", f"Failed to Entitle tokens to customer: {response.status_code}\n{response.text}")
 
     except Exception as e:
         messagebox.showerror("Error", f"Request failed: {str(e)}")   
