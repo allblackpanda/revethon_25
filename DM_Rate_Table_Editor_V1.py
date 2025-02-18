@@ -19,6 +19,7 @@ from ttkbootstrap.dialogs import DatePickerDialog
 UAT_OPTION = "-uat"
 REPORTING_APP_URL = "http://127.0.0.1:8050/"
 PERMANENT_EPOCH = 253402300799999
+ICON = "Revethon2025.ico"
 
 # Global example rate table
 EXAMPLE_RATE_TABLE = [{
@@ -156,6 +157,7 @@ def get_rate_tables(filtered=False):
             window_width = 520  # Adjust as necessary
             window_height = 550  # Adjust as necessary
             series_window.geometry(f"{window_width}x{window_height}+{x+250}+{y+100}")
+            series_window.iconbitmap(ICON)
 
             series_label = tk.Label(series_window, text="Select a Rate Table Series and Version:", padx=0, pady=5)
             series_label.pack()
@@ -273,6 +275,7 @@ def select_date():
     """Opens a date picker dialog to select a date."""
     top = ttkb.Toplevel()
     top.title("Select Date")
+    top.iconbitmap(ICON)
 #top.geometry(f"{400}x{420}+{x+80}+{y+70}")
 
     date_picker = DatePickerDialog(top)
@@ -481,7 +484,7 @@ def generate_uuid():
 # After Registering, map the token line items
 def map_token_line_item(instance_id):
     """Maps token line items to a customer instance."""
-    customer_name = customer_name_entry.get().strip()
+    customer_id = customer_id_entry.get().strip()
     token_number = token_number_entry.get().strip()
     start_date = start_date_label.cget("text")
     end_date = end_date_label.cget("text")
@@ -523,7 +526,7 @@ def map_token_line_item(instance_id):
         response = requests.put(url, headers=headers, data=json_payload)
 
         if response.status_code in [200, 201]:         
-            messagebox.showinfo("Success: ", f"{token_number} Tokens successfully entitled to: {customer_name}")
+            messagebox.showinfo("Success: ", f"{token_number} Tokens successfully entitled to: {customer_id}")
 
         else:
             messagebox.showerror("Error", f"Failed to Entitle tokens to customer: {response.status_code}\n{response.text}")
@@ -736,7 +739,7 @@ window_width, window_height = 1100, 800
 screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
-root.iconbitmap("Revethon2025.ico")  
+root.iconbitmap(ICON)  
 
 # Create a Notebook (Tabbed Interface)
 notebook = ttk.Notebook(root)
