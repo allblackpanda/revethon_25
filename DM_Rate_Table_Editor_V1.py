@@ -544,7 +544,10 @@ def create_and_map_customer():
     selected_rate_table = rate_table_var.get()
     isPermanent = permanent_var.get()
     if not customer_id or not token_number or not start_date or not end_date or not selected_rate_table or end_date =="Select End Date" or start_date == "Select Start Date":
-        messagebox.showerror("All fields are required")
+        messagebox.showerror("Error","All fields are required.")
+        return
+    elif not isPermanent and start_date >= end_date:
+        messagebox.showerror("Error","End Date must be after Start Date.")
         return
     else:
         elastic_instance_id = register_customer()
