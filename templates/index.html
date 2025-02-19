@@ -8,24 +8,49 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body onload="fetchData()">
     <div class="container mt-5">
         <h1 class="mb-4">Reporting Dashboard</h1>
-        <div class="mb-3">
-            <label for="num-days" class="form-label"># Past Days</label>
-            <input type="number" id="num-days" class="form-control" value="60" min="1" step="1">
-            <button class="btn btn-primary mt-2" onclick="fetchData()">Refresh Data</button>
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div style="width: 200px;">
+                <label for="account-dropdown" class="form-label">Select Customer Account</label>
+                <select id="account-dropdown" class="form-select form-select-sm" onchange="filterChartData()"></select>
+            </div>
+            <div style="width: 200px;">
+                <label for="num-days" class="form-label"># Past Days</label>
+                <input type="number" id="num-days" class="form-control" value="60" min="1" step="1">
+                <button class="btn btn-primary w-100 mt-2" onclick="fetchData()">Refresh Data</button>
+            </div>
         </div>
-        <label for="account-dropdown" class="form-label">Select Customer Account</label>
-        <select id="account-dropdown" class="form-select" onchange="filterChartData()"></select>
-        <div class="mt-4">
+        
+        <div class="row">
+            <div class="col-md-6">
+                <h3 class="text-center">Request Success</h3>
+                <canvas id="denialChart" style="max-height: 300px;"></canvas>
+            </div>
+            <div class="col-md-6">
+                <h3 class="text-center">Most Requested Items</h3>
+                <canvas id="summaryChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+        
+        <div class="mt-4" style="height: 500px;">
+            <h3 class="text-center">Usage over Time</h3>
             <canvas id="usageChart"></canvas>
         </div>
     </div>
 
     <script>
         let chartInstance = null;
+        let summaryChartInstance = null;
+        let denialChartInstance = null;
         let allData = [];
+        const responseCodes = {
+            "306": "Insufficient elastic tokens available",
+            "101": "Successful item checkout",
+            "102": "Unknown",
+            "201": "Item not found in any effective rate table"
+        };
 
         function fetchData() {
             const numDays = document.getElementById('num-days').value;
@@ -35,7 +60,7 @@
                     allData = data;
                     let dropdown = document.getElementById('account-dropdown');
                     dropdown.innerHTML = accounts.map(acc => `<option value="${acc}">${acc}</option>`).join('');
-                    generateChart(allData);
+                    filterChartData();
                 })
                 .catch(error => console.error('Error fetching data:', error));
         }
@@ -43,10 +68,12 @@
         function filterChartData() {
             const selectedAccount = document.getElementById('account-dropdown').value;
             const filteredData = allData.filter(item => item.accountId === selectedAccount);
-            generateChart(filteredData);
+            generateUsageChart(filteredData);
+            generateSummaryChart(filteredData);
+            generateDenialChart(filteredData);
         }
 
-        function generateChart(data) {
+        function generateUsageChart(data) {
             if (!data.length) return;
             
             const ctx = document.getElementById('usageChart').getContext('2d');
@@ -80,6 +107,123 @@
                 }
             });
         }
+
+        function generateSummaryChart(data) {
+    if (!data.length) return;
+    
+    const summaryCtx = document.getElementById('summaryChart').getContext('2d');
+    const aggregatedData = {};
+    
+    // Aggregate the data
+    data.forEach(item => {
+        const key = `${item.item} - ${item.itemVersion}`;
+        if (!aggregatedData[key]) {
+            aggregatedData[key] = 0;
+        }
+        aggregatedData[key] += item.meterQuantity;
+    });
+    
+    // Filter out entries with zero values
+    const filteredData = Object.entries(aggregatedData)
+        .filter(([_, value]) => value > 0)
+        .reduce((obj, [key, value]) => {
+            obj[key] = value;
+            return obj;
+        }, {});
+    
+    const labels = Object.keys(filteredData);
+    const values = Object.values(filteredData);
+    
+    if (summaryChartInstance) {
+        summaryChartInstance.destroy();
+    }
+    
+    summaryChartInstance = new Chart(summaryCtx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Aggregate Meter Quantity',
+                data: values,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { title: { display: true, text: 'Item - Item Version' } },
+                y: { title: { display: true, text: 'Meter Quantity' } }
+            }
+        }
+        });
+    }
+
+        function generateDenialChart(data) {
+    const denialData = data.filter(item => item.requestResponse);
+    const responseCounts = {};
+    
+    denialData.forEach(item => {
+        const code = item.requestResponse;
+        responseCounts[code] = (responseCounts[code] || 0) + 1;
+    });
+    
+    // Create arrays for labels and values while maintaining order
+    const entries = Object.entries(responseCounts);
+    const labels = [];
+    const values = [];
+    const backgroundColor = [];
+    
+    // Map response codes to specific colors
+    const colorMap = {
+        "101": "rgba(75, 192, 75, 0.6)",    // Green
+        "306": "rgba(255, 99, 132, 0.6)",   // Red
+        "102": "rgba(128, 128, 128, 0.6)",  // Gray
+        "201": "rgba(255, 159, 64, 0.6)"    // Orange
+    };
+    
+    entries.forEach(([code, count]) => {
+        labels.push(responseCodes[code] || `Unknown Code (${code})`);
+        values.push(count);
+        backgroundColor.push(colorMap[code] || "rgba(153, 102, 255, 0.6)"); // Default purple for unknown codes
+    });
+    
+    const ctx = document.getElementById('denialChart').getContext('2d');
+    
+    if (denialChartInstance) {
+        denialChartInstance.destroy();
+    }
+    
+    denialChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Denial Response Codes',
+                data: values,
+                backgroundColor: backgroundColor,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(tooltipItem) {
+                             // Calculate total for percentage
+                             const total = tooltipItem.dataset.data.reduce((sum, value) => sum + value, 0);
+                            const percentage = ((tooltipItem.raw / total) * 100).toFixed(1);
+                            return `${tooltipItem.label}: ${percentage}% (${tooltipItem.raw} entries)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    }      
     </script>
 </body>
 </html>

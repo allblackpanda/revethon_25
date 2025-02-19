@@ -4,6 +4,7 @@ import requests
 import plotly.express as px
 from datetime import datetime
 
+PORT = 5000
 def read_config():
     """Reads configuration from a file and returns it as a dictionary."""
     config = {}
@@ -51,15 +52,35 @@ def get_data():
     df = pd.DataFrame(data)
     
     if not df.empty:
-        df["usageTime"] = df["usageTime"].astype(float) / 1000
-        df["usageTime"] = df["usageTime"].apply(lambda x: datetime.utcfromtimestamp(x).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-        df["used"] = df["used"].astype(float).round(2)
-        df = df.sort_values(by="usageTime", ascending=True)
-        account_options = df["accountId"].unique().tolist()
+            # Handle empty values in usageTime
+            df["usageTime"] = df["usageTime"].fillna(0)
+            df["usageTime"] = df["usageTime"].astype(float) / 1000
+            df["usageTime"] = df["usageTime"].apply(lambda x: datetime.utcfromtimestamp(x).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+            
+            # Handle empty values in used and meterQuantity
+            df["used"] = pd.to_numeric(df["used"], errors='coerce').fillna(0).round(2)
+            df["meterQuantity"] = pd.to_numeric(df["meterQuantity"], errors='coerce').fillna(0).round(2)
+            
+            df = df.sort_values(by="usageTime", ascending=True)
+            account_options = df["accountId"].unique().tolist()
     else:
         account_options = []
 
     return jsonify({'accounts': account_options, 'data': df.to_dict(orient='records')})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    config = read_config()
+    port = config["port"] if "port" in config else PORT
+    app.run(debug=True, port=port)
+#Reason Codes - 7 Insufficient Feature Count
+#Reason Codes - 15 Feature Unavailable
+#Reason Codes - 67 Feature unavailable, checkout filter rejection
+#Reason Codes - 11 Feature Expired
+#Reason Codes - 12 Feature Version not Found
+# response_codes = {
+#     7: "Insufficient Feature Count",
+#     15: "Feature Unavailable",
+#     67: "Feature unavailable, checkout filter rejection",
+#     11: "Feature Expired",
+#     12: "Feature Version not Found"
+# }

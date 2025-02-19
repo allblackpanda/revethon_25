@@ -17,7 +17,8 @@ import ttkbootstrap as ttkb
 from ttkbootstrap.dialogs import DatePickerDialog
 
 UAT_OPTION = "-uat"
-REPORTING_APP_URL = "http://127.0.0.1:5000/"
+REPORTING_APP_URL = "http://127.0.0.1"
+PORT = 5000
 PERMANENT_EPOCH = 253402300799999
 ICON = "Revethon2025.ico"
 
@@ -64,15 +65,17 @@ def start_reporting():
 
     def open_browser():
         time.sleep(3)
+        port = config["port"] if "port" in config else PORT
+        url = REPORTING_APP_URL + f":{port}"
         try:
             chrome_path = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
             webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
-            webbrowser.get("chrome").open(REPORTING_APP_URL)
+            webbrowser.get("chrome").open(url)
         except webbrowser.Error:
             try:
                 chrome_path = "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
                 webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
-                webbrowser.get("chrome").open(REPORTING_APP_URL)
+                webbrowser.get("chrome").open(url)
             except webbrowser.Error as e:
                 messagebox.showerror("Error", str(e))
 

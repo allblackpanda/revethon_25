@@ -1,6 +1,7 @@
 site = flex1107
 #site = flex1806
 geo = com
+port = 5050
 #Filters to get rid of unwanted Account IDs
 accountid_exclude_uat = Cust-ID,test,{CUST,Zerox,A123,Cust_id
 accountid_exclude_prod = ACME Elastic Customer
