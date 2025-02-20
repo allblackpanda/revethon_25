@@ -644,7 +644,7 @@ def load_customer_names():
 
 
 def get_customer_line_items():
-    """Fetches and displays line items for the selected customer."""
+    """Fetches and displays line items for the selected customer in a Treeview widget."""
     selected_account_id = selected_account_var.get()
     selected_customer = next((c for c in customer_data if c["accountId"] == selected_account_id), None)
     
@@ -666,12 +666,11 @@ def get_customer_line_items():
         data = response.json()
 
         # Clear previous content
-        line_items_text.config(state="normal")
-        line_items_text.delete("1.0", "end")
+        for row in line_items_table.get_children():
+            line_items_table.delete(row)
 
         if not data:
-            line_items_text.insert("1.0", "  No line items found for this customer.\n")  # Added two spaces at the beginning
-            line_items_text.config(state="disabled")
+            messagebox.showinfo("Info", "No line items found for this customer.")
             return
 
         # Convert and sort data by Start Date
@@ -683,50 +682,70 @@ def get_customer_line_items():
             end_date = "Permanent" if end_epoch == PERMANENT_EPOCH else convert_epoch_to_date(end_epoch)[:10]  # Extract YYYY-MM-DD
             quantity = item.get("quantity", "N/A")
             used = round(float(item.get("used", 0)), 1)  # Round Used to 1 decimal place
-
-            # Calculate %Used (avoid division by zero)
             percent_used = round((used / quantity) * 100, 1) if quantity and quantity != "N/A" and quantity > 0 else 0.0
-
             rate_table_series = item.get("attributes", {}).get("rateTableSeries", "N/A")
 
-            formatted_data.append({
-                "Start Date": start_date,
-                "End Date": end_date,
-                "Quantity": quantity,
-                "Used": used,
-                "%Used": percent_used,  # New column
-                "Rate Table Series": rate_table_series,
-                "Start Epoch": start_epoch,  # Keep original epoch for sorting
-            })
+            formatted_data.append((start_date, end_date, quantity, used, percent_used, rate_table_series))
 
-        # Sort by Start Date (ascending order)
-        formatted_data.sort(key=lambda x: x["Start Epoch"])
+        # Sort by Start Date
+        formatted_data.sort()
 
-        # Assign sequential line numbers **AFTER SORTING**
-        for index, item in enumerate(formatted_data, start=1):
-            item["Line #"] = index
-
-        # Table Header with **extra blank row before it**
-        formatted_output = (
-            f"\n"  # Adds a blank row before the table
-            f"  {'Line#':<8}{'Start Date':<15}{'End Date':<15}{'Token Qty':<12}{'Used':<10}{'%Used':<10}{'Rate Table':<30}\n"
-            f"  {'-'*80}\n"
-        )
-
-        for item in formatted_data:
-            formatted_output += (
-                f"  {item['Line #']:<8}{item['Start Date']:<15}{item['End Date']:<15}{item['Quantity']:<12}{item['Used']:<10}{item['%Used']:<10}{item['Rate Table Series']:<30}\n"
-            )
-
-        # Display total count with leading spaces
-        formatted_output += f"\n  Total Line Items: {len(formatted_data)}\n"
-
-        # Insert into text widget
-        line_items_text.insert("1.0", formatted_output)
-        line_items_text.config(state="disabled")
-    
+        # Populate the Treeview
+        for row in formatted_data:
+            line_items_table.insert("", "end", values=row)
     else:
         messagebox.showerror("Error", f"Failed to get line items: {response.status_code}")
+
+def edit_line_item():
+    """Opens a window to edit the selected line item."""
+    selected_item = line_items_table.selection()
+    if not selected_item:
+        messagebox.showerror("Error", "Please select a line item to edit.")
+        return
+
+    item_values = line_items_table.item(selected_item, "values")
+    edit_window = tk.Toplevel()
+    edit_window.title("Edit Line Item")
+
+    tk.Label(edit_window, text="Start Date:").grid(row=0, column=0)
+    start_date_entry = tk.Entry(edit_window, state="disabled")
+    start_date_entry.grid(row=0, column=1)
+    start_date_entry.insert(0, item_values[0])
+
+    tk.Label(edit_window, text="End Date:").grid(row=1, column=0)
+    end_date_entry = tk.Entry(edit_window)
+    end_date_entry.grid(row=1, column=1)
+    end_date_entry.insert(0, item_values[1])
+
+    tk.Label(edit_window, text="Quantity:").grid(row=2, column=0)
+    quantity_entry = tk.Entry(edit_window)
+    quantity_entry.grid(row=2, column=1)
+    quantity_entry.insert(0, item_values[2])
+
+    tk.Label(edit_window, text="Rate Table Series:").grid(row=3, column=0)
+    rate_table_var = tk.StringVar(edit_window)
+    rate_table_dropdown = ttk.Combobox(edit_window, textvariable=rate_table_var, values=get_rate_tables())
+    rate_table_dropdown.grid(row=3, column=1)
+    rate_table_dropdown.set(item_values[5])
+
+    def apply_changes():
+        # update_line_item(item_values, end_date_entry.get(), quantity_entry.get(), rate_table_var.get())
+        edit_window.destroy()
+        get_customer_line_items()
+
+    tk.Button(edit_window, text="Apply Changes", command=apply_changes).grid(row=4, column=0)
+    tk.Button(edit_window, text="Cancel", command=edit_window.destroy).grid(row=4, column=1)
+
+def delete_line_item():
+    """Deletes the selected line item."""
+    selected_item = line_items_table.selection()
+    if not selected_item:
+        messagebox.showerror("Error", "Please select a line item to delete.")
+        return
+
+    item_values = line_items_table.item(selected_item, "values")
+    delete_api_call(item_values)
+    get_customer_line_items()
 
 def open_calendar(label):
     """ Opens a date picker and updates the given label with the selected date. """
@@ -949,12 +968,47 @@ customer_dropdown = ttk.Combobox(existing_customer_tab, textvariable=selected_ac
 customer_dropdown.bind("<<ComboboxSelected>>", lambda event: get_customer_line_items())
 customer_dropdown.pack()
 
+# Enable buttons when a row is selected
+def on_table_select(event):
+    selected = line_items_table.selection()
+    if selected:
+        edit_button.config(state=tk.NORMAL)
+        delete_button.config(state=tk.NORMAL)
+    else:
+        edit_button.config(state=tk.DISABLED)
+        delete_button.config(state=tk.DISABLED)
+
+
+
+# Creating the Treeview Widget
+columns = ("Start Date", "End Date", "Quantity", "Used", "% Used", "Rate Table Series")
+line_items_table = ttk.Treeview(existing_customer_tab, columns=columns, show="headings", height=15)
+line_items_table.bind("<<TreeviewSelect>>", on_table_select)
+
+# Define column headings
+for col in columns:
+    line_items_table.heading(col, text=col, anchor="w")  # Align left
+    line_items_table.column(col, width=120, anchor="w")  # Align left
+    line_items_table.tag_configure("heading", font=("Arial", 10, "bold"))  # Bold headings
+
+line_items_table.pack(fill="both", expand=True)
+
+
+button_frame = tk.Frame(existing_customer_tab)
+button_frame.pack(pady=10)
+
+edit_button = ttk.Button(button_frame, text="Edit Line Item", command=edit_line_item, state=tk.DISABLED)
+edit_button.pack(side="left", padx=10)
+
+delete_button = ttk.Button(button_frame, text="Delete Line Item", command=delete_line_item, state=tk.DISABLED)
+delete_button.pack(side="left", padx=10)
+
 # Add blank labels to create space before "Customer Line Items:"
-ttk.Label(existing_customer_tab, text="").pack()
-ttk.Label(existing_customer_tab, text="").pack()
-ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
-line_items_text = Text(existing_customer_tab, wrap="word", height=25, width=85)
-line_items_text.pack()
+# ttk.Label(existing_customer_tab, text="").pack()
+# ttk.Label(existing_customer_tab, text="").pack()
+# ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
+# line_items_text = Text(existing_customer_tab, wrap="word", height=25, width=85)
+# line_items_text.pack()
 
 # Fetch and display logo
 #logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
