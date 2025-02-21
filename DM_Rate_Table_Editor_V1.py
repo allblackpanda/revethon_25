@@ -10,6 +10,8 @@ import subprocess
 import threading
 import webbrowser
 import argparse
+import logging
+import traceback
 import re
 import uuid
 from io import BytesIO
@@ -23,16 +25,7 @@ PERMANENT_EPOCH = 253402300799999
 ICON = "Revethon2025.ico"
 FONT = ("Arial", 10, "normal")
 CONFIG_FILE = "config.json"
-
-####################################################################################
-# Create command line argument options
-parser = argparse.ArgumentParser()
-parser.add_argument('-config', "--config", help="Specify the configuration to override default config.json file", default="default")
-# Get what was passed if anything
-args = parser.parse_args()
-config_parameter = args.config
-
-# Global example rate table
+LOG_FILE = "rate_table_editor.log"
 EXAMPLE_RATE_TABLE = [{
     "effectiveFrom": "",
     "series": "NewSeries",
@@ -44,6 +37,36 @@ EXAMPLE_RATE_TABLE = [{
     ]
 }]
 
+####################################################################################
+# Create command line argument options
+parser = argparse.ArgumentParser()
+parser.add_argument('-config', "--config", help="Specify the configuration to override default config.json file", default="default")
+# Get what was passed if anything
+args = parser.parse_args()
+config_parameter = args.config
+
+# Add logging
+# Configure logging
+logging.basicConfig(
+    filename=LOG_FILE, 
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+def log_function_call(func):
+    """Decorator to log function calls and their results."""
+    def wrapper(*args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+            logging.info(f"Called: {func.__name__} | Args: {args}, Kwargs: {kwargs} | Result: {result}")
+            return result
+        except Exception as e:
+            logging.error(f"Error in {func.__name__} at line {traceback.extract_tb(e.__traceback__)[-1][1]}: {e}")
+            raise e
+    return wrapper
+
+
+
 def read_config():
     """Reads configuration from a file and returns it as a dictionary."""
     try:
@@ -51,35 +74,36 @@ def read_config():
             json_file = json.load(file)
             selected_config = json_file[config_parameter]
             return selected_config
-    except ValueError:
-        return f"Error: Config option {config} not found in file"
-    except FileNotFoundError:
-        return f"Error: File not found at path: {CONFIG_FILE}"
-    except json.JSONDecodeError:
-        return "Error: Invalid JSON format in file"
+    except Exception as e:
+        logging.error(f"Error reading config: {e}")
+        return {}
     
+@log_function_call
 def load_json(file_path):
     try:
         with open(file_path, 'r') as file:
-            data = json.load(file)
-            return data
-    except FileNotFoundError:
-        return f"Error: File not found at path: {file_path}"
-    except json.JSONDecodeError:
-        return "Error: Invalid JSON format in file"
+            return json.load(file)
+    except Exception as e:
+        logging.error(f"Error loading JSON: {e}")
+        return None
 
+@log_function_call
 def convert_epoch_to_date(epoch_ms):
-    """Converts epoch time in milliseconds to a human-readable date string."""
     try:
         epoch_sec = int(epoch_ms) / 1000  # Convert milliseconds to seconds
         return datetime.datetime.fromtimestamp(epoch_sec).strftime('%Y-%m-%d %H:%M:%S')
-    except ValueError:
+    except Exception as e:
+        logging.error(f"Invalid Date conversion: {e}")
         return "Invalid Date"
 
+@log_function_call
 def start_reporting():
     """Starts the Reporting.py script in the background and opens the reporting dashboard in Chrome."""
-    messagebox.showinfo("Starting Reporter", "Starting the reporter application and opening browser. It may take a couple of seconds.")
-    subprocess.Popen(["python", "Reporting.py", "-config", config_parameter], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        subprocess.Popen(["python", "Reporting.py", "-config", config_parameter], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        logging.error(f"Error starting reporting: {e}")
+        messagebox.ERROR("Error","Error opening reporting, please check the log file")
 
     def open_browser():
         time.sleep(3)
@@ -95,19 +119,19 @@ def start_reporting():
                 webbrowser.register("chrome", None, webbrowser.BackgroundBrowser(chrome_path))
                 webbrowser.get("chrome").open(url)
             except webbrowser.Error as e:
-                messagebox.showerror("Error", str(e))
+                logging.error(f"Error Opening Browser: {e}")
+                messagebox.showerror("Error", "Error opening chrome. Please check the log file")
 
     threading.Thread(target=open_browser, daemon=True).start()
 
+@log_function_call
 def convert_date_to_epoch(date_str, date_format='%Y-%m-%d'):
-    """Converts a date string to epoch time in milliseconds."""
     try:
-        if not date_str:  # Handle empty strings
-            return 0  # Default to epoch 0 (Jan 1, 1970)
         dt = datetime.datetime.strptime(date_str, date_format)
-        return int(dt.timestamp() * 1000)  # Convert to milliseconds
-    except ValueError:
-        return 0  # Default to an old epoch time if parsing fails
+        return int(dt.timestamp() * 1000)
+    except Exception as e:
+        logging.error(f"Date conversion error: {e}")
+        return 0
 
 def filter_series(input_series):
     """Filters out historic rate tables and returns only the latest versions and future tables."""
@@ -1195,4 +1219,10 @@ if response.status_code == 200:
     tk.Label(existing_customer_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")    
 
 # Start the main event loop
-root.mainloop()
+# Start the main application
+if __name__ == "__main__":
+    logging.info("Application started.")
+    try:
+        root.mainloop()
+    except Exception as e:
+        logging.critical(f"Critical application error: {e}")
