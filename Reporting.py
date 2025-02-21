@@ -1,26 +1,42 @@
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
-import requests
+import requests, argparse
+import json
 import plotly.express as px
 from datetime import datetime
 
 PORT = 5000
+CONFIG_FILE = "config.json"
+
+
 def read_config():
     """Reads configuration from a file and returns it as a dictionary."""
-    config = {}
-    with open("config.txt", "r") as file:
-        for line in file:
-            line = line.strip()
-            if "=" in line:
-                key, value = line.split(" = ", 1)  # Ensure splitting only on the first occurrence
-                if key in ["accountid_exclude_uat", "accountid_exclude_prod"]:
-                    config[key] = value.split(",")  # Convert comma-separated values into a list
-                else:
-                    config[key] = value
-    return config
+    try:
+        with open(CONFIG_FILE, 'r') as file:
+            json_file = json.load(file)
+            selected_config = json_file[config_parameter]
+            return selected_config
+    except ValueError:
+        return f"Error: Config option {config} not found in file"
+    except FileNotFoundError:
+        return f"Error: File not found at path: {CONFIG_FILE}"
+    except json.JSONDecodeError:
+        return "Error: Invalid JSON format in file"
+    
+    # config = {}
+    # with open("config.txt", "r") as file:
+    #     for line in file:
+    #         line = line.strip()
+    #         if "=" in line:
+    #             key, value = line.split(" = ", 1)  # Ensure splitting only on the first occurrence
+    #             if key in ["accountid_exclude_uat", "accountid_exclude_prod"]:
+    #                 config[key] = value.split(",")  # Convert comma-separated values into a list
+    #             else:
+    #                 config[key] = value
+    # return config
 
 def fetch_data(number_days):
-    config = read_config()
+    # config = read_config()
     url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/data/api/v1/report/usage"
     basic_Auth = config["basic_Auth"]
     headers = {"Authorization": f"Basic {basic_Auth}", "Content-Type": "application/json"}
@@ -69,6 +85,13 @@ def get_data():
     return jsonify({'accounts': account_options, 'data': df.to_dict(orient='records')})
 
 if __name__ == '__main__':
+    ####################################################################################
+    # Create command line argument options
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-config', "--config", help="Specify the configuration to override default config.json file", default='daniel')
+    # Get what was passed if anything
+    args = parser.parse_args()
+    config_parameter = args.config
     config = read_config()
     port = config["port"] if "port" in config else PORT
     app.run(debug=True, port=port)

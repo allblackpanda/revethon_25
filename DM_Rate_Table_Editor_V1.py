@@ -9,10 +9,10 @@ import datetime
 import subprocess
 import threading
 import webbrowser
+import argparse
 import re
 import uuid
 from io import BytesIO
-from oauth2client.service_account import ServiceAccountCredentials
 import ttkbootstrap as ttkb
 from ttkbootstrap.dialogs import DatePickerDialog
 
@@ -22,6 +22,15 @@ PORT = 5000
 PERMANENT_EPOCH = 253402300799999
 ICON = "Revethon2025.ico"
 FONT = ("Arial", 10, "normal")
+CONFIG_FILE = "config.json"
+
+####################################################################################
+# Create command line argument options
+parser = argparse.ArgumentParser()
+parser.add_argument('-config', "--config", help="Specify the configuration to override default config.json file", default='default')
+# Get what was passed if anything
+args = parser.parse_args()
+config_parameter = args.config
 
 # Global example rate table
 EXAMPLE_RATE_TABLE = [{
@@ -37,19 +46,27 @@ EXAMPLE_RATE_TABLE = [{
 
 def read_config():
     """Reads configuration from a file and returns it as a dictionary."""
-    config = {}
-    with open("config.txt", "r") as file:
-        for line in file:
-            line = line.strip()
-            if "=" in line:
-                key, value = line.split(" = ", 1)  # Ensure splitting only on the first occurrence
-                if key in ["accountid_exclude_uat", "accountid_exclude_prod"]:
-                    config[key] = value.split(",")  # Convert comma-separated values into a list
-                else:
-                    config[key] = value
-    return config
-
-config = read_config()
+    try:
+        with open(CONFIG_FILE, 'r') as file:
+            json_file = json.load(file)
+            selected_config = json_file[config_parameter]
+            return selected_config
+    except ValueError:
+        return f"Error: Config option {config} not found in file"
+    except FileNotFoundError:
+        return f"Error: File not found at path: {CONFIG_FILE}"
+    except json.JSONDecodeError:
+        return "Error: Invalid JSON format in file"
+    
+def load_json(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            return data
+    except FileNotFoundError:
+        return f"Error: File not found at path: {file_path}"
+    except json.JSONDecodeError:
+        return "Error: Invalid JSON format in file"
 
 def convert_epoch_to_date(epoch_ms):
     """Converts epoch time in milliseconds to a human-readable date string."""
@@ -62,7 +79,7 @@ def convert_epoch_to_date(epoch_ms):
 def start_reporting():
     """Starts the Reporting.py script in the background and opens the reporting dashboard in Chrome."""
     messagebox.showinfo("Starting Reporter", "Starting the reporter application and opening browser. It may take a couple of seconds.")
-    subprocess.Popen(["python", "Reporting.py"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.Popen(["python", "Reporting.py", "-config", config_parameter], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def open_browser():
         time.sleep(3)
@@ -133,7 +150,8 @@ def get_rate_tables(filtered=False):
         data = response.json()
         if not data:
             messagebox.showinfo("Info", "No Rate Tables Exist, loading an example Rate Table")
-            data = [EXAMPLE_RATE_TABLE]
+            data = EXAMPLE_RATE_TABLE
+
         if isinstance(data, list):
             data.sort(key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
 
@@ -233,9 +251,10 @@ def get_rate_tables(filtered=False):
                 main_text_area.insert("1.0", text_data)
                 
                 result_label.config(text="Rate table successfully copied")
-                date_button.config(state=tk.ACTIVE)
-                post_site_button.config(state=tk.ACTIVE)
-                increment_version_button.config(state=tk.ACTIVE)
+                date_button.config(state=tk.NORMAL)
+                post_site_button.config(state=tk.NORMAL)
+                increment_version_button.config(state=tk.NORMAL)
+                clear_editor_button.config(state=tk.NORMAL)
                 
                 series_window.destroy()
 
@@ -274,15 +293,6 @@ def get_rate_tables(filtered=False):
         show_series()
     except FileNotFoundError:
         messagebox.showerror("Error", "No rate tables found.")
-
-def select_date():
-    """Opens a date picker dialog to select a date."""
-    top = ttkb.Toplevel()
-    top.title("Select Date")
-    top.iconbitmap(ICON)
-#top.geometry(f"{400}x{420}+{x+80}+{y+70}")
-
-    date_picker = DatePickerDialog(top)
 
 def increment_version():
     """Increments the value of 'Series Version' in the main text UI."""
@@ -387,6 +397,17 @@ def post_to_site():
                 messagebox.showwarning("Warning", "Rate Table with the specified Series and Version already exists")
     except Exception as e:
         messagebox.showerror("Error", f"Failed to process data: {str(e)}")
+
+def clear_editor():
+    """Clears the contents of the Main UI."""
+    main_text_area.config(state="normal")
+    main_text_area.delete("1.0", "end")
+    main_text_area.config(state="normal")
+    increment_version_button.config(state=tk.DISABLED)
+    date_button.config(state=tk.DISABLED)
+    post_site_button.config(state=tk.DISABLED)
+    clear_editor_button.config(state=tk.DISABLED)
+    result_label.config(text="Editor cleared successfully")
 
 def open_user_guide():
     """Opens the Dynamic Monetization User Guide in the default web browser."""
@@ -495,7 +516,7 @@ def map_token_line_item(instance_id):
     selected_rate_table = rate_table_var.get()
     start_epoch = convert_date_to_epoch(start_date)
     
-    if end_date == "PERMANENT":
+    if end_date == "Permanent":
         end_epoch = PERMANENT_EPOCH
     else:
         end_epoch = convert_date_to_epoch(end_date)
@@ -558,35 +579,13 @@ def create_and_map_customer():
         if elastic_instance_id != 0: #if it's 0 that means customer exists
             map_token_line_item(elastic_instance_id)
 
-def on_existing_customers_tab_selected(event):
+def tab_selected_changed(event):
     """Update customer dropdown values when the 'Manage Existing Customers' tab is selected."""
     global customer_data
-    customer_data = load_customer_names()  # Reload customer list
-    
-    # Update dropdown values
-    customer_dropdown["values"] = [c["accountId"] for c in customer_data]
-    
-    # Set the first customer by default if available
-    if customer_data:
-        selected_account_var.set(customer_data[0]["accountId"])
-        get_customer_line_items()
-    else:
-        selected_account_var.set("")  # Clear selection if no customers exist
+    if notebook.select() == notebook.tabs()[0]:
+        result_label.config(text="")
 
-def on_env_change():
-    """Reload customer names and refresh rate table dropdown when the environment selection changes."""
-    global customer_data
-    customer_data = load_customer_names()  # Reload customer list
-
-    # Update the customer dropdown and their line items
-    customer_dropdown["values"] = [c["accountId"] for c in customer_data]
-    if customer_data:
-        selected_account_var.set(customer_data[0]["accountId"])  # Set first option
-    else:
-        selected_account_var.set("")  # Clear selection if no data
-    get_customer_line_items()  # Refresh line items
-    
-    if notebook.select() == notebook.tabs()[1]:  #If on the New Customers Tab
+    elif notebook.select() == notebook.tabs()[1]:
         # **Refresh Rate Tables on New Customer Registration Tab**
         new_rate_table_list = get_rate_tables_names()
 
@@ -597,7 +596,51 @@ def on_env_change():
             rate_table_dropdown["values"] = []  # Clear dropdown if no data
             rate_table_var.set("")  # Reset selection
 
-config = read_config()
+    elif notebook.select() == notebook.tabs()[2]:  # Only update on the third tab
+        customer_data = load_customer_names()  # Reload customer list
+        
+        # Update dropdown values
+        customer_dropdown["values"] = [c["accountId"] for c in customer_data]
+        
+        # Set the first customer by default if available
+        if customer_data:
+            selected_account_var.set(customer_data[0]["accountId"])
+            get_customer_line_items()
+        else:
+            selected_account_var.set("")  # Clear selection if no customers exist
+
+def on_env_change():
+    """Reload customer names and refresh rate table dropdown when the environment selection changes."""
+    
+    if notebook.select() == notebook.tabs()[0]: # Only update on the first tab
+        if clear_editor_button.instate(('!disabled',)):  #If button not disabled
+            confirm_clear_editor = messagebox.askyesno("Clear Editor?", "Do you want to clear the editor as you change environment?")
+            if confirm_clear_editor:
+                clear_editor()
+        return
+    
+    elif notebook.select() == notebook.tabs()[1] or notebook.select() == notebook.tabs()[2]: 
+        global customer_data
+        customer_data = load_customer_names()  # Reload customer list
+
+        # Update the customer dropdown and their line items
+        customer_dropdown["values"] = [c["accountId"] for c in customer_data]
+        if customer_data:
+            selected_account_var.set(customer_data[0]["accountId"])  # Set first option
+        else:
+            selected_account_var.set("")  # Clear selection if no data
+        get_customer_line_items()  # Refresh line items
+        
+        if notebook.select() == notebook.tabs()[1]:  #If on the New Customers Tab
+            # **Refresh Rate Tables on New Customer Registration Tab**
+            new_rate_table_list = get_rate_tables_names()
+
+            if new_rate_table_list:
+                rate_table_dropdown["values"] = new_rate_table_list  # Update dropdown values
+                rate_table_var.set(new_rate_table_list[0])  # Set first value as default
+            else:
+                rate_table_dropdown["values"] = []  # Clear dropdown if no data
+                rate_table_var.set("")  # Reset selection
 
 def load_customer_names():
     """Loads customer names from the API, filtering out excluded account IDs."""
@@ -641,14 +684,15 @@ def load_customer_names():
     
     return customer_data
 
-
 def get_customer_line_items():
     """Fetches and displays line items for the selected customer in a Treeview widget."""
     selected_account_id = selected_account_var.get()
     selected_customer = next((c for c in customer_data if c["accountId"] == selected_account_id), None)
     
-    if not selected_customer:
-        messagebox.showerror("Error", "Please select a valid customer.")
+    if not selected_customer :
+        # Clear previous content
+        for row in line_items_table.get_children():
+            line_items_table.delete(row)
         return
     
     customer_id = selected_customer["id"]
@@ -696,7 +740,6 @@ def get_customer_line_items():
     else:
         messagebox.showerror("Error", f"Failed to get line items: {response.status_code}")
 
-
 def edit_line_item():
     """Opens a window to edit the selected line item."""
     selected_item = line_items_table.selection()
@@ -710,61 +753,70 @@ def edit_line_item():
 
     edit_window = tk.Toplevel(root)
     edit_window.title("Edit Line Item")
-    window_width = 550  # Adjust as necessary
+    window_width = 630  # Adjust as necessary
     window_height = 600  # Adjust as necessary
     edit_window.geometry(f"{window_width}x{window_height}+{x+250}+{y+100}")
     edit_window.iconbitmap(ICON)
 
-    edit_start_date_frame = tk.Frame(edit_window)
-    edit_start_date_frame.grid(row=0, column=0,sticky="w", pady=20, padx=20)
+    edit_title_frame = tk.Frame(edit_window)
+    edit_title_frame.grid(row=0, column=0, sticky="w", pady=30, padx=20)
+    ttk.Label(edit_title_frame, text="Edit Line Item", font=("Arial", 12, "bold")).grid(row=0, column=0)
 
-    # Start Date
-    tk.Label(edit_start_date_frame,text="Start Date:", font=FONT).grid(row=0, column=0)
-    edit_start_date_label = ttk.Label(edit_start_date_frame,text=item_values[0], background="lightgray", font=FONT, width=15).grid(row=0, column=1)
-
-    # End Date
-    edit_end_date_frame = tk.Frame(edit_window)
-    edit_end_date_frame.grid(row=1, column=0,sticky="w", pady=20, padx=20)
-    ttk.Label(edit_end_date_frame, text="End Date:", font=("Arial", 10, "normal")).grid(row=1, column=0)
-    edit_end_date_label = ttk.Label(edit_end_date_frame, text=item_values[1], font=FONT, background="lightgray", width=15)
-    edit_end_date_label.grid(row=1, column=1, padx=10)
-    edit_end_date_btn = tk.Button(edit_end_date_frame, text="Pick Date", font=FONT, command=lambda: open_calendar(edit_end_date_label,edit_end_date_label))
-    edit_end_date_btn.grid(row=1, column=2, padx=10)
-
-    # Function to toggle the date fields based on checkbox state
-    def toggle_permanent_edit():
-        if edit_permanent_var.get():
-            edit_end_date_btn.config(state=tk.DISABLED)
-            edit_end_date_label.config(text="Permanent")
-        else:
-            edit_end_date_btn.config(state=tk.NORMAL)
-            edit_end_date_label.config(text="Select End Date")
-
-    # Permanent Checkbox
-    edit_permanent_var = tk.BooleanVar(edit_end_date_frame)
-    edit_permanent_checkbox = ttk.Checkbutton(edit_end_date_frame, text="Permanent", variable=edit_permanent_var, command=toggle_permanent_edit).grid(row=1, column=3, padx=10)
+    # Rate Table Dropdown
+    edit_rate_frame = tk.Frame(edit_window)
+    edit_rate_frame.grid(row=1, column=0, sticky="w", pady=20, padx=20)
+    tk.Label(edit_rate_frame, text="Rate Table:", font=FONT).grid(row=1, column=0)
+    edit_rate_table_var = tk.StringVar(edit_rate_frame)
+    edit_rate_table_names = get_rate_tables_names()
+    selected_table = item_values[5] if item_values[5] in edit_rate_table_names else ""
+    edit_rate_table_var.set(selected_table)
+    edit_rate_table_dropdown = ttk.Combobox(edit_rate_frame, textvariable=edit_rate_table_var, values=edit_rate_table_names, width=15)
+    edit_rate_table_dropdown.state(['readonly'])
+    edit_rate_table_dropdown.grid(row=1, column=1, padx=20)
 
     # Token Quantity Entry
     edit_quantity_frame = tk.Frame(edit_window)
     edit_quantity_frame.grid(row=2, column=0, sticky="w", pady=20, padx=20)
     tk.Label(edit_quantity_frame, text="Quantity:", font=FONT).grid(row=2, column=0)
-    edit_quantity_entry = tk.Entry(edit_quantity_frame, font=FONT,validate="key", validatecommand=vcmd)
+    edit_quantity_entry = tk.Entry(edit_quantity_frame, font=FONT,validate="key", validatecommand=vcmd, width=15)
     edit_quantity_entry.insert(0, item_values[2])
-    edit_quantity_entry.grid(row=2, column=1)
-    
-    
-    # Rate Table Dropdown
-    edit_rate_frame = tk.Frame(edit_window)
-    edit_rate_frame.grid(row=3, column=0, sticky="w", pady=20, padx=20)
-    tk.Label(edit_rate_frame, text="Rate Table Series:", font=FONT).grid(row=3, column=0)
-    edit_rate_table_var = tk.StringVar(edit_rate_frame)
-    edit_rate_table_names = get_rate_tables_names()
-    selected_table = item_values[5] if item_values[5] in edit_rate_table_names else ""
-    edit_rate_table_var.set(selected_table)
-    edit_rate_table_dropdown = ttk.Combobox(edit_rate_frame, textvariable=edit_rate_table_var, values=edit_rate_table_names, width=25)
-    edit_rate_table_dropdown.state(['readonly'])
-    edit_rate_table_dropdown.grid(row=3, column=1)
-    
+    edit_quantity_entry.grid(row=2, column=1, padx=44)
+
+
+    edit_start_date_frame = tk.Frame(edit_window)
+    edit_start_date_frame.grid(row=3, column=0,sticky="w", pady=20, padx=20)
+
+    # Start Date
+    tk.Label(edit_start_date_frame,text="Start Date:", font=FONT).grid(row=3, column=0)
+    edit_start_date_label = ttk.Label(edit_start_date_frame,text=item_values[0], background="lightgray", font=FONT, width=15)
+    edit_start_date_label.grid(row=3, column=1, padx=27)
+
+    # End Date
+    old_end_date = item_values[1]
+    edit_end_date_frame = tk.Frame(edit_window)
+    edit_end_date_frame.grid(row=4, column=0,sticky="w", pady=20, padx=20)
+    ttk.Label(edit_end_date_frame, text="End Date:", font=("Arial", 10, "normal")).grid(row=4, column=0)
+    edit_end_date_label = ttk.Label(edit_end_date_frame, text=item_values[1], font=FONT, background="lightgray", width=15)
+    edit_end_date_label.grid(row=4, column=1, padx=38)
+    edit_end_date_btn = ttk.Button(edit_end_date_frame, text="Pick Date", command=lambda: open_calendar(edit_end_date_label,edit_end_date_label))
+    edit_end_date_btn.grid(row=4, column=2, padx=10)
+
+    # Function to toggle the date fields based on checkbox state
+    def toggle_permanent_edit(previous_date=None):
+        if edit_permanent_var.get():
+            edit_end_date_btn.config(state=tk.DISABLED)
+            edit_end_date_label.config(text="Permanent")
+        else:
+            edit_end_date_btn.config(state=tk.NORMAL)
+            if previous_date:
+                edit_end_date_label.config(text=previous_date)
+            else:
+                edit_end_date_label.config(text="Select End Date")
+
+    # Permanent Checkbox
+    edit_permanent_var = tk.BooleanVar(edit_end_date_frame)
+    edit_permanent_checkbox = ttk.Checkbutton(edit_end_date_frame, text="Permanent", variable=edit_permanent_var, command=lambda: toggle_permanent_edit(old_end_date))
+    edit_permanent_checkbox.grid(row=4, column=3, padx=10)
 
     def apply_changes():
         new_quantity = int(edit_quantity_entry.get())
@@ -804,11 +856,11 @@ def edit_line_item():
 
     # Apply or cancel buttons
     edit_button_frame = tk.Frame(edit_window)
-    edit_button_frame.grid(row=4, column=0,sticky="w", pady=20, padx=20)
-    edit_apply_btn = tk.Button(edit_button_frame, text="Apply Changes", font=FONT, command=apply_changes)
-    edit_apply_btn.grid(row=4, column=0)
-    edit_cancel_btn = tk.Button(edit_button_frame, text="Cancel", font=FONT, command=edit_window.destroy)
-    edit_cancel_btn.grid(row=4, column=1, padx=30)
+    edit_button_frame.grid(row=5, column=0,sticky="w", pady=60, padx=20)
+    edit_apply_btn = ttk.Button(edit_button_frame, text="Apply Changes", command=apply_changes, width=14)
+    edit_apply_btn.grid(row=5, column=0)
+    edit_cancel_btn = ttk.Button(edit_button_frame, text="Cancel", command=edit_window.destroy, width=14)
+    edit_cancel_btn.grid(row=5, column=1, padx=30)
 
 def delete_line_item():
     """Deletes the selected line item."""
@@ -847,7 +899,6 @@ def delete_line_item():
     # get_customer_line_items()
     return
 
-
 def open_calendar(label,calendar_start_date=None):
     """ Opens a date picker and updates the given label with the selected date. """
     if calendar_start_date is not None:
@@ -861,10 +912,44 @@ def open_calendar(label,calendar_start_date=None):
     selected_date = date_picker.date_selected
     label.config(text=selected_date)
 
+def validate_token_input(P):
+    return P.isdigit() and int(P) > 0 if P else True
+
+# Enable buttons when a row is selected
+def on_table_select(event):
+    selected = line_items_table.selection()
+    if selected:
+        edit_button.config(state=tk.NORMAL)
+        delete_button.config(state=tk.NORMAL)
+    else:
+        edit_button.config(state=tk.DISABLED)
+        delete_button.config(state=tk.DISABLED)
+
+# Function to toggle the date fields based on checkbox state
+def toggle_permanent():
+    if permanent_var.get():
+        end_date_btn.config(state=tk.DISABLED)
+        end_date_label.config(text="Permanent")
+    else:
+        end_date_btn.config(state=tk.NORMAL)
+        end_date_label.config(text="Select End Date")
+
+def get_default_date():
+    today = datetime.datetime.today()
+    today = datetime.datetime.now()
+    year = today.year
+    month = today.strftime("%m")
+    day = today.strftime("%d")
+    return f"{year}-{month}-{day}"
+
+
+############################################################################################################
+# Main Window Development
+############################################################################################################
 config = read_config()
 
 # Create the main application window
-root = ttkb.Window(themename="cosmo")
+root = ttkb.Window(themename=config["theme"])
 root.title("Revenera Dynamic Monetization Standalone Tool")
 
 # Set window size and position
@@ -873,6 +958,7 @@ screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight(
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
 root.iconbitmap(ICON)  
+
 
 # Create a Notebook (Tabbed Interface)
 notebook = ttk.Notebook(root)
@@ -890,15 +976,20 @@ notebook.add(customer_entitlements_tab, text="Entitle New Customers", padding= 5
 existing_customer_tab = ttk.Frame(notebook)
 notebook.add(existing_customer_tab, text="Manage Existing Customers", padding=5)
 
-
 # UI Components for "Rate Table Generator" tab
 env_var = tk.StringVar(value=UAT_OPTION)
+
+
+############################################################################################################
+# Manage Rate Table Tab
+############################################################################################################
 
 # Radio Buttons for Environment Selection
 radio_frame = tk.Frame(rate_table_tab)
 radio_frame.pack(side="top", anchor="nw", pady=30)
-tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production").pack(side="left", padx=10)
-tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION).pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production", command=on_env_change).pack(side="left", padx=10)
+tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION, command=on_env_change).pack(side="left", padx=10)
+
 # Tenant label
 ttk.Label(rate_table_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=8)
 
@@ -907,15 +998,18 @@ button_width = 23
 
 # Add a new button to get filtered rate tables
 filter_var = tk.BooleanVar()
-ttk.Button(rate_table_tab, text="Get Current/Future Tables", command=lambda: get_rate_tables(filtered=True), padding=(5, 7), width=button_width).place(x=10, y=120)
+ttk.Button(rate_table_tab, text="Get Current/Future Tables", command=lambda:get_rate_tables(filtered=True), padding=(5, 7), width=button_width).place(x=10, y=120)
 ttk.Button(rate_table_tab, text="Get All Rate Tables", command=get_rate_tables, padding=(5, 7), width=button_width).place(x=10, y=170)
 increment_version_button = ttk.Button(rate_table_tab, text="Increment Series Version", command=increment_version, padding=(5, 7), width=button_width, state=tk.DISABLED)
 increment_version_button.place(x=10, y=220)
 date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=rate_table_start_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
 date_button.place(x=10, y=270)
 
+clear_editor_button = ttk.Button(rate_table_tab, text="Clear Editor", command=clear_editor, padding=(5, 7), width=button_width, state=tk.DISABLED)
+clear_editor_button.place(x=810, y=120)
+
 post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
-post_site_button.place(x=810, y=220)
+post_site_button.place(x=810, y=270)
 
 # Text Area for Rate Table
 main_text_area = Text(rate_table_tab, wrap="word", height=20, width=50)
@@ -948,6 +1042,11 @@ exit_button2.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-righ
 exit_button3 = ttk.Button(bottom_frame_existing_customer_tab, text="Exit", command=root.quit, padding=(20, 5))
 exit_button3.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
 
+
+############################################################################################################
+# New Customer Registation Tab
+############################################################################################################
+
 # Tenant label (Upper Left at x=30, y=10)
 ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=8)
 
@@ -957,7 +1056,6 @@ radio_frame.pack(side="top", anchor="nw", pady=30)
 
 tk.Radiobutton(radio_frame, text="Production", variable=env_var, value="Production", command=on_env_change).pack(side="left", padx=10)
 tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION, command=on_env_change).pack(side="left", padx=10)
-
 
 # Create a frame for better layout management
 customer_frame = tk.Frame(customer_entitlements_tab)
@@ -980,27 +1078,13 @@ entry_frame.place(x=30, y=220)
 ttk.Label(entry_frame, text="Rate Table:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
 rate_table_var = tk.StringVar()
 
-rate_table_list = get_rate_tables_names()
-if rate_table_list:
-    rate_table_var.set(rate_table_list[0])
+rate_table_list = []
 rate_table_dropdown = ttk.Combobox(entry_frame, textvariable=rate_table_var, values=rate_table_list, width=23)
 rate_table_dropdown.state(['readonly'])
 rate_table_dropdown.pack(side="left", padx=20)
 ttk.Label(entry_frame, text="Number of Tokens:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
 
-def validate_token_input(P):
-    return P.isdigit() and int(P) > 0 if P else True
-
 vcmd = (entry_frame.register(validate_token_input), "%P")
-
-# Function to toggle the date fields based on checkbox state
-def toggle_permanent():
-    if permanent_var.get():
-        end_date_btn.config(state=tk.DISABLED)
-        end_date_label.config(text="Permanent")
-    else:
-        end_date_btn.config(state=tk.NORMAL)
-        end_date_label.config(text="Select End Date")
 
 token_number_entry = ttk.Entry(entry_frame, width=22, font=("Arial", 10, "normal"), validate="key", validatecommand=vcmd)
 token_number_entry.pack(side="left", padx=3)
@@ -1009,15 +1093,6 @@ start_date_frame = tk.Frame(customer_entitlements_tab)
 start_date_frame.place(x=30, y=300) 
 
 ttk.Label(start_date_frame, text="Start Date:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
-
-#default start date
-def get_default_date():
-    today = datetime.datetime.today()
-    today = datetime.datetime.now()
-    year = today.year
-    month = today.strftime("%m")
-    day = today.strftime("%d")
-    return f"{year}-{month}-{day}"
 
 start_date_label = ttk.Label(start_date_frame, text=get_default_date(), background="lightgray", font=("Arial", 10, "normal"), width=15)
 start_date_label.pack(side="left", padx=23)
@@ -1036,7 +1111,6 @@ end_date_label.pack(side="left", padx=30)
 end_date_btn = ttk.Button(end_date_frame, text="Pick Date", command=lambda: open_calendar(end_date_label), width=10)
 end_date_btn.pack(side="left")
 
-# Permanent Checkbox
 permanent_var = tk.BooleanVar()
 permanent_checkbox = ttk.Checkbutton(end_date_frame, text="Permanent", variable=permanent_var, command=toggle_permanent)
 permanent_checkbox.pack(side="left", padx=40)
@@ -1049,6 +1123,11 @@ generate_button.pack(padx=10, pady=70)
 
 map_label = ttk.Label(create_frame, text="", wraplength=400)
 map_label.pack()
+
+
+############################################################################################################
+# Existing Customer Entitlements Tab
+############################################################################################################
 
 # Tenant label (Upper Left at x=30, y=10)
 ttk.Label(existing_customer_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=8)
@@ -1063,10 +1142,10 @@ tk.Radiobutton(radio_frame, text="UAT", variable=env_var, value=UAT_OPTION, comm
 # UI Components for "Manage Existing Customer" tab
 
 # Bind the function to tab selection
-notebook.bind("<<NotebookTabChanged>>", on_existing_customers_tab_selected)
+notebook.bind("<<NotebookTabChanged>>", tab_selected_changed)
 
 # Load customers and update UI
-ttk.Label(existing_customer_tab, text="Select Customer (Account ID):").pack()
+ttk.Label(existing_customer_tab, text="Select Customer (Account ID):", font=FONT).pack()
 customer_data = load_customer_names()
 selected_account_var = tk.StringVar(existing_customer_tab)
 
@@ -1076,18 +1155,6 @@ customer_dropdown = ttk.Combobox(existing_customer_tab, textvariable=selected_ac
                                  values=[c["accountId"] for c in customer_data], width=40, state='readonly', height=70)
 customer_dropdown.bind("<<ComboboxSelected>>", lambda event: get_customer_line_items())
 customer_dropdown.pack()
-
-# Enable buttons when a row is selected
-def on_table_select(event):
-    selected = line_items_table.selection()
-    if selected:
-        edit_button.config(state=tk.NORMAL)
-        delete_button.config(state=tk.NORMAL)
-    else:
-        edit_button.config(state=tk.DISABLED)
-        delete_button.config(state=tk.DISABLED)
-
-
 
 # Creating the Treeview Widget
 columns = ("Start Date", "End Date", "Quantity", "Used", "% Used", "Rate Table Series")
@@ -1102,7 +1169,6 @@ for col in columns:
 
 line_items_table.pack(fill="both", expand=True, pady=20)
 
-
 button_frame = tk.Frame(existing_customer_tab)
 button_frame.pack(side="left", pady=10)
 
@@ -1113,17 +1179,9 @@ edit_button.pack(side="left", padx=10)
 delete_button = ttk.Button(button_frame, text="Delete Line Item", command=delete_line_item, state=tk.DISABLED)
 delete_button.pack(side="left", padx=10)
 
-# Add blank labels to create space before "Customer Line Items:"
-# ttk.Label(existing_customer_tab, text="").pack()
-# ttk.Label(existing_customer_tab, text="").pack()
-# ttk.Label(existing_customer_tab, text="Customer Line Items:").pack()
-# line_items_text = Text(existing_customer_tab, wrap="word", height=25, width=85)
-# line_items_text.pack()
-
 # Fetch and display logo
-#logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revenera_logo"
-logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revethon_logo"
-response = requests.get(logo_url)
+# logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revethon_logo"
+response = requests.get(config['logo_url'])
 if response.status_code == 200:
     image_data = Image.open(BytesIO(response.content)).resize((250, 56), Image.Resampling.LANCZOS)
     logo_image = ImageTk.PhotoImage(image_data)
@@ -1131,4 +1189,5 @@ if response.status_code == 200:
     tk.Label(customer_entitlements_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
     tk.Label(existing_customer_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")    
 
+# Start the main event loop
 root.mainloop()
