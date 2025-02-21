@@ -27,7 +27,7 @@ CONFIG_FILE = "config.json"
 ####################################################################################
 # Create command line argument options
 parser = argparse.ArgumentParser()
-parser.add_argument('-config', "--config", help="Specify the configuration to override default config.json file", default='default')
+parser.add_argument('-config', "--config", help="Specify the configuration to override default config.json file", default="default")
 # Get what was passed if anything
 args = parser.parse_args()
 config_parameter = args.config
@@ -147,27 +147,30 @@ def get_rate_tables(filtered=False):
     }
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
-        data = response.json()
-        if not data:
-            messagebox.showinfo("Info", "No Rate Tables Exist, loading an example Rate Table")
-            data = EXAMPLE_RATE_TABLE
+        try:
+            data = response.json()
+            if not data:
+                messagebox.showinfo("Info", "No Rate Tables Exist, loading an example Rate Table")
+                data = EXAMPLE_RATE_TABLE
 
-        if isinstance(data, list):
-            data.sort(key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
+            if isinstance(data, list):
+                data.sort(key=lambda x: (x.get('series', ''), float(x.get('version', 0))), reverse=True)
 
-            # Convert epoch timestamps
-            for rate_table in data:
-                if 'effectiveFrom' in rate_table and rate_table['effectiveFrom']:
-                    rate_table['effectiveFrom'] = convert_epoch_to_date(rate_table['effectiveFrom'])
-                if 'created' in rate_table and rate_table['created']:
-                    rate_table['created'] = convert_epoch_to_date(rate_table['created'])
+                # Convert epoch timestamps
+                for rate_table in data:
+                    if 'effectiveFrom' in rate_table and rate_table['effectiveFrom']:
+                        rate_table['effectiveFrom'] = convert_epoch_to_date(rate_table['effectiveFrom'])
+                    if 'created' in rate_table and rate_table['created']:
+                        rate_table['created'] = convert_epoch_to_date(rate_table['created'])
 
-            # Apply filtering if button was clicked
-            if filtered:
-                data = filter_series(data)
+                # Apply filtering if button was clicked
+                if filtered:
+                    data = filter_series(data)
 
-        with open("rate_tables.json", "w") as file:
-            json.dump(data, file, indent=4)
+            with open("rate_tables.json", "w") as file:
+                json.dump(data, file, indent=4)
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Failed to parse rate tables data.")
     else:
         messagebox.showerror("Error", f"Failed to retrieve rate tables: {response.status_code}")
 
@@ -492,13 +495,15 @@ def get_rate_tables_names():
     }
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
-        data = response.json()
-        table_list = []
-        for entry in data:
-            if entry["series"] not in table_list:
-                table_list.append(entry["series"])
-        #print(table_list)
-        return table_list
+        try:
+            data = response.json()
+            table_list = []
+            for entry in data:
+                if entry["series"] not in table_list:
+                    table_list.append(entry["series"])
+            return table_list
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Failed to parse rate tables data.")
     else:
         messagebox.showerror("Error", f"Failed to retrieve rate tables: {response.status_code}")
 
@@ -788,7 +793,7 @@ def edit_line_item():
 
     # Start Date
     tk.Label(edit_start_date_frame,text="Start Date:", font=FONT).grid(row=3, column=0)
-    edit_start_date_label = ttk.Label(edit_start_date_frame,text=item_values[0], background="lightgray", font=FONT, width=15)
+    edit_start_date_label = ttk.Label(edit_start_date_frame,text=item_values[0], font=FONT, width=15)
     edit_start_date_label.grid(row=3, column=1, padx=27)
 
     # End Date
@@ -796,7 +801,7 @@ def edit_line_item():
     edit_end_date_frame = tk.Frame(edit_window)
     edit_end_date_frame.grid(row=4, column=0,sticky="w", pady=20, padx=20)
     ttk.Label(edit_end_date_frame, text="End Date:", font=("Arial", 10, "normal")).grid(row=4, column=0)
-    edit_end_date_label = ttk.Label(edit_end_date_frame, text=item_values[1], font=FONT, background="lightgray", width=15)
+    edit_end_date_label = ttk.Label(edit_end_date_frame, text=item_values[1], font=FONT, width=15)
     edit_end_date_label.grid(row=4, column=1, padx=38)
     edit_end_date_btn = ttk.Button(edit_end_date_frame, text="Pick Date", command=lambda: open_calendar(edit_end_date_label,edit_end_date_label))
     edit_end_date_btn.grid(row=4, column=2, padx=10)
@@ -1094,7 +1099,7 @@ start_date_frame.place(x=30, y=300)
 
 ttk.Label(start_date_frame, text="Start Date:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
 
-start_date_label = ttk.Label(start_date_frame, text=get_default_date(), background="lightgray", font=("Arial", 10, "normal"), width=15)
+start_date_label = ttk.Label(start_date_frame, text=get_default_date(), font=("Arial", 10, "normal"), width=15)
 start_date_label.pack(side="left", padx=23)
 
 start_date_btn = ttk.Button(start_date_frame, text="Pick Date", command=lambda: open_calendar(start_date_label), width=10)
@@ -1105,7 +1110,7 @@ end_date_frame.place(x=30, y=380)
 
 ttk.Label(end_date_frame, text="End Date:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
 
-end_date_label = ttk.Label(end_date_frame, text="Select End Date", background="lightgray", font=("Arial", 10, "normal"), width=15)
+end_date_label = ttk.Label(end_date_frame, text="Select End Date", font=("Arial", 10, "normal"), width=15)
 end_date_label.pack(side="left", padx=30)
 
 end_date_btn = ttk.Button(end_date_frame, text="Pick Date", command=lambda: open_calendar(end_date_label), width=10)
