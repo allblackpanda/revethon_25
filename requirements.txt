@@ -1,12 +1,8 @@
+Flask
+pandas
+requests
+plotly
+tkinter
 Pillow
 tkcalendar
-requests
 ttkbootstrap
-pandas
-openpyxl
-xlrd
-xlwt
-gspread
-oauth2client
-dash
-plotly
