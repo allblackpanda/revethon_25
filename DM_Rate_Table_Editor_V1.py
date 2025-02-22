@@ -810,7 +810,7 @@ def edit_line_item():
     tk.Label(edit_quantity_frame, text="Quantity:", font=FONT).grid(row=2, column=0)
     edit_quantity_entry = tk.Entry(edit_quantity_frame, font=FONT,validate="key", validatecommand=vcmd, width=15)
     edit_quantity_entry.insert(0, item_values[2])
-    edit_quantity_entry.grid(row=2, column=1, padx=44)
+    edit_quantity_entry.grid(row=2, column=1, padx=37)
 
 
     edit_start_date_frame = tk.Frame(edit_window)
@@ -819,7 +819,7 @@ def edit_line_item():
     # Start Date
     tk.Label(edit_start_date_frame,text="Start Date:", font=FONT).grid(row=3, column=0)
     edit_start_date_label = ttk.Label(edit_start_date_frame,text=item_values[0], font=FONT, width=15)
-    edit_start_date_label.grid(row=3, column=1, padx=27)
+    edit_start_date_label.grid(row=3, column=1, padx=22)
 
     # End Date
     old_end_date = item_values[1]
@@ -827,7 +827,7 @@ def edit_line_item():
     edit_end_date_frame.grid(row=4, column=0,sticky="w", pady=20, padx=20)
     ttk.Label(edit_end_date_frame, text="End Date:", font=("Arial", 10, "normal")).grid(row=4, column=0)
     edit_end_date_label = ttk.Label(edit_end_date_frame, text=item_values[1], font=FONT, width=15)
-    edit_end_date_label.grid(row=4, column=1, padx=38)
+    edit_end_date_label.grid(row=4, column=1, padx=30)
     edit_end_date_btn = ttk.Button(edit_end_date_frame, text="Pick Date", command=lambda: open_calendar(edit_end_date_label,edit_end_date_label))
     edit_end_date_btn.grid(row=4, column=2, padx=10)
 
@@ -860,7 +860,7 @@ def edit_line_item():
     edit_state_var.set(original_item.get("state", "DEPLOYED"))
     edit_state_dropdown = ttk.Combobox(edit_state_frame, textvariable=edit_state_var, values=state_options, width=15)
     edit_state_dropdown.state(['readonly'])
-    edit_state_dropdown.grid(row=5, column=1, padx=20)
+    edit_state_dropdown.grid(row=5, column=1, padx=60)
 
     def apply_changes():
         new_quantity = int(edit_quantity_entry.get())
