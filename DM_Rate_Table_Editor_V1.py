@@ -808,20 +808,22 @@ def edit_line_item():
     edit_quantity_frame = tk.Frame(edit_window)
     edit_quantity_frame.grid(row=2, column=0, sticky="w", pady=20, padx=20)
     tk.Label(edit_quantity_frame, text="Quantity:", font=FONT).grid(row=2, column=0)
-    edit_quantity_entry = tk.Entry(edit_quantity_frame, font=FONT,validate="key", validatecommand=vcmd, width=15)
+    edit_quantity_entry = tk.Entry(edit_quantity_frame, font=FONT,validate="key", validatecommand=vcmd, width=16)
     edit_quantity_entry.insert(0, item_values[2])
     edit_quantity_entry.grid(row=2, column=1, padx=37)
 
-
+    # Start Date
+    old_start_date = item_values[0]
     edit_start_date_frame = tk.Frame(edit_window)
     edit_start_date_frame.grid(row=3, column=0,sticky="w", pady=20, padx=20)
-
-    # Start Date
-    tk.Label(edit_start_date_frame,text="Start Date:", font=FONT).grid(row=3, column=0)
+    tk.Label(edit_start_date_frame,text="Start Date:", font=("Arial", 10, "normal")).grid(row=3, column=0)
     edit_start_date_label = ttk.Label(edit_start_date_frame,text=item_values[0], font=FONT, width=15)
     edit_start_date_label.grid(row=3, column=1, padx=22)
+    edit_start_date_btn = ttk.Button(edit_start_date_frame, text="Pick Date", command=lambda: open_calendar(edit_start_date_label,edit_start_date_label))
+    edit_start_date_btn.grid(row=3, column=2, padx=10)
 
-    # End Date
+
+    # End Dateold_end_date
     old_end_date = item_values[1]
     edit_end_date_frame = tk.Frame(edit_window)
     edit_end_date_frame.grid(row=4, column=0,sticky="w", pady=20, padx=20)
@@ -829,7 +831,7 @@ def edit_line_item():
     edit_end_date_label = ttk.Label(edit_end_date_frame, text=item_values[1], font=FONT, width=15)
     edit_end_date_label.grid(row=4, column=1, padx=30)
     edit_end_date_btn = ttk.Button(edit_end_date_frame, text="Pick Date", command=lambda: open_calendar(edit_end_date_label,edit_end_date_label))
-    edit_end_date_btn.grid(row=4, column=2, padx=10)
+    edit_end_date_btn.grid(row=4, column=2, padx=0)
 
     # Function to toggle the date fields based on checkbox state
     def toggle_permanent_edit(previous_date=None):
@@ -865,6 +867,7 @@ def edit_line_item():
     def apply_changes():
         new_quantity = int(edit_quantity_entry.get())
         original_item['quantity']= new_quantity if float(new_quantity) > original_item['used'] else messagebox.ERROR('Error',"You cannot reduce the token amount to a quanity less than the amount of tokens used.")# quantity can't be less than amount used.
+        original_item['start'] = convert_date_to_epoch(edit_start_date_label.cget("text"))
         original_item['end'] = PERMANENT_EPOCH if edit_permanent_var.get() else convert_date_to_epoch(edit_end_date_label.cget("text"))
         original_item['attributes']['rateTableSeries'] = edit_rate_table_var.get()
         original_item['state'] = edit_state_var.get()
@@ -1167,7 +1170,7 @@ end_date_frame.place(x=30, y=380)
 ttk.Label(end_date_frame, text="End Date:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
 
 end_date_label = ttk.Label(end_date_frame, text="Select End Date", font=("Arial", 10, "normal"), width=15)
-end_date_label.pack(side="left", padx=30)
+end_date_label.pack(side="left", padx=28)
 
 end_date_btn = ttk.Button(end_date_frame, text="Pick Date", command=lambda: open_calendar(end_date_label), width=10)
 end_date_btn.pack(side="left")
