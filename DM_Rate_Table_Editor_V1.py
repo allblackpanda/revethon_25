@@ -850,6 +850,7 @@ def edit_line_item():
     previous_end_date = item_values[1]
     if previous_end_date == "Permanent":
         edit_permanent_var.set(True)
+        edit_end_date_btn.config(state=tk.DISABLED)
     edit_permanent_checkbox = ttk.Checkbutton(edit_end_date_frame, text="Permanent", variable=edit_permanent_var, command=lambda: toggle_permanent_edit(old_end_date))
     edit_permanent_checkbox.grid(row=4, column=3, padx=10)
 
