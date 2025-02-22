@@ -865,7 +865,15 @@ def edit_line_item():
         original_item['end'] = PERMANENT_EPOCH if edit_permanent_var.get() else convert_date_to_epoch(edit_end_date_label.cget("text"))
         original_item['attributes']['rateTableSeries'] = edit_rate_table_var.get()
         original_item['state'] = edit_state_var.get()
+
+        # Check if the state is changed to OBSOLETE
+        if original_item['state'] == 'OBSOLETE':
+            confirm_obsolete = messagebox.askyesno("Warning", "Are you sure you want to OBSOLETE this line item? This is a permanent action and cannot be undone.")
+            if not confirm_obsolete:
+                return
+
         customer_instance_id = edit_customer_id.get()
+
         # Call API:
         # Determine API URL
         if env_var.get() == UAT_OPTION:
