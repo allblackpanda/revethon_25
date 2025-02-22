@@ -1202,6 +1202,7 @@ customer_dropdown.pack()
 columns = ("Start Date", "End Date", "Quantity", "Used", "% Used", "Rate Table Series", "State")
 line_items_table = ttk.Treeview(existing_customer_tab, columns=columns, show="headings", height=15)
 line_items_table.bind("<<TreeviewSelect>>", on_table_select)
+line_items_table.bind("<Double-1>", lambda event: edit_line_item())  # Bind double-click event to edit_line_item
 
 # Define column headings
 for col in columns:
