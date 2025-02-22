@@ -757,8 +757,9 @@ def get_customer_line_items():
             used = round(float(item.get("used", 0)), 1)  # Round Used to 1 decimal place
             percent_used = round((used / quantity) * 100, 1) if quantity and quantity != "N/A" and quantity > 0 else 0.0
             rate_table_series = item.get("attributes", {}).get("rateTableSeries", "N/A")
+            state = item.get("state", "N/A")  # Add state field
 
-            formatted_data.append((start_date, end_date, quantity, used, percent_used, rate_table_series,json.dumps(item)))
+            formatted_data.append((start_date, end_date, quantity, used, percent_used, rate_table_series, state, json.dumps(item)))
 
         # Sort by Start Date
         formatted_data.sort()
@@ -777,7 +778,7 @@ def edit_line_item():
         messagebox.showerror("Error", "Please select a line item to edit.")
         return
     item_values = line_items_table.item(selected_item, "values")
-    item_string = item_values[6]
+    item_string = item_values[7]
     original_item = json.loads(item_string)
 
     edit_window = tk.Toplevel(root)
@@ -847,11 +848,23 @@ def edit_line_item():
     edit_permanent_checkbox = ttk.Checkbutton(edit_end_date_frame, text="Permanent", variable=edit_permanent_var, command=lambda: toggle_permanent_edit(old_end_date))
     edit_permanent_checkbox.grid(row=4, column=3, padx=10)
 
+    # State Dropdown
+    edit_state_frame = tk.Frame(edit_window)
+    edit_state_frame.grid(row=5, column=0, sticky="w", pady=20, padx=20)
+    tk.Label(edit_state_frame, text="State:", font=FONT).grid(row=5, column=0)
+    edit_state_var = tk.StringVar(edit_state_frame)
+    state_options = ["DEPLOYED", "INACTIVE", "OBSOLETE"]
+    edit_state_var.set(original_item.get("state", "DEPLOYED"))
+    edit_state_dropdown = ttk.Combobox(edit_state_frame, textvariable=edit_state_var, values=state_options, width=15)
+    edit_state_dropdown.state(['readonly'])
+    edit_state_dropdown.grid(row=5, column=1, padx=20)
+
     def apply_changes():
         new_quantity = int(edit_quantity_entry.get())
         original_item['quantity']= new_quantity if float(new_quantity) > original_item['used'] else messagebox.ERROR('Error',"You cannot reduce the token amount to a quanity less than the amount of tokens used.")# quantity can't be less than amount used.
         original_item['end'] = PERMANENT_EPOCH if edit_permanent_var.get() else convert_date_to_epoch(edit_end_date_label.cget("text"))
         original_item['attributes']['rateTableSeries'] = edit_rate_table_var.get()
+        original_item['state'] = edit_state_var.get()
         customer_instance_id = edit_customer_id.get()
         # Call API:
         # Determine API URL
@@ -885,11 +898,11 @@ def edit_line_item():
 
     # Apply or cancel buttons
     edit_button_frame = tk.Frame(edit_window)
-    edit_button_frame.grid(row=5, column=0,sticky="w", pady=60, padx=20)
+    edit_button_frame.grid(row=6, column=0,sticky="w", pady=60, padx=20)
     edit_apply_btn = ttk.Button(edit_button_frame, text="Apply Changes", command=apply_changes, width=14)
-    edit_apply_btn.grid(row=5, column=0)
+    edit_apply_btn.grid(row=6, column=0)
     edit_cancel_btn = ttk.Button(edit_button_frame, text="Cancel", command=edit_window.destroy, width=14)
-    edit_cancel_btn.grid(row=5, column=1, padx=30)
+    edit_cancel_btn.grid(row=6, column=1, padx=30)
 
 def delete_line_item():
     """Deletes the selected line item."""
@@ -1186,7 +1199,7 @@ customer_dropdown.bind("<<ComboboxSelected>>", lambda event: get_customer_line_i
 customer_dropdown.pack()
 
 # Creating the Treeview Widget
-columns = ("Start Date", "End Date", "Quantity", "Used", "% Used", "Rate Table Series")
+columns = ("Start Date", "End Date", "Quantity", "Used", "% Used", "Rate Table Series", "State")
 line_items_table = ttk.Treeview(existing_customer_tab, columns=columns, show="headings", height=15)
 line_items_table.bind("<<TreeviewSelect>>", on_table_select)
 
