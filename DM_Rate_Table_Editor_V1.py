@@ -96,18 +96,17 @@ def convert_epoch_to_date(epoch_ms):
         logging.error(f"Invalid Date conversion: {e}")
         return "Invalid Date"
 
-@log_function_call
 def start_reporting():
     """Starts the Reporting.py script in the background and opens the reporting dashboard in Chrome."""
     try:
+        messagebox.showinfo("Starting Reporter", "Starting Reporter. This may take a couple of seconds.")
         subprocess.Popen(["python", "Reporting.py", "-config", config_parameter], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception as e:
         logging.error(f"Error starting reporting: {e}")
         messagebox.ERROR("Error","Error opening reporting, please check the log file")
-
+    port = config["port"] if "port" in config else PORT
     def open_browser():
         time.sleep(3)
-        port = config["port"] if "port" in config else PORT
         url = REPORTING_APP_URL + f":{port}"
         try:
             chrome_path = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
@@ -123,6 +122,7 @@ def start_reporting():
                 messagebox.showerror("Error", "Error opening chrome. Please check the log file")
 
     threading.Thread(target=open_browser, daemon=True).start()
+    messagebox.showinfo("Running",f"If your browser hasn't opened up, you should go to the url: localhost:{port}")
 
 @log_function_call
 def convert_date_to_epoch(date_str, date_format='%Y-%m-%d'):
@@ -838,13 +838,16 @@ def edit_line_item():
             edit_end_date_label.config(text="Permanent")
         else:
             edit_end_date_btn.config(state=tk.NORMAL)
-            if previous_date:
+            if previous_date and previous_date != "Permanent":
                 edit_end_date_label.config(text=previous_date)
             else:
                 edit_end_date_label.config(text="Select End Date")
 
     # Permanent Checkbox
     edit_permanent_var = tk.BooleanVar(edit_end_date_frame)
+    previous_end_date = item_values[1]
+    if previous_end_date == "Permanent":
+        edit_permanent_var.set(True)
     edit_permanent_checkbox = ttk.Checkbutton(edit_end_date_frame, text="Permanent", variable=edit_permanent_var, command=lambda: toggle_permanent_edit(old_end_date))
     edit_permanent_checkbox.grid(row=4, column=3, padx=10)
 
