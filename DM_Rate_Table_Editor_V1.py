@@ -920,33 +920,41 @@ def delete_line_item():
         return
 
     item_values = line_items_table.item(selected_item, "values")
-    item_string = item_values[6]
+    item_string = item_values[7]
     original_item = json.loads(item_string)
     activation_id = original_item.get("activationId", "")
     customer_instance_id = edit_customer_id.get()
 
-    # if env_var.get() == UAT_OPTION:
-    #     url = f"https://internal-swm-uat-pas-provisioning-silo-2-1385074548.us-west-2.elb.amazonaws.com/dynamicmonetization/provisioning/api/v1.0/instances/{customer_instance_id}/line-items/{activation_id}"
-    # else:
-    #     url = f"https://internal-swm-uat-pas-provisioning-silo-2-1385074548.us-west-2.elb.amazonaws.com/dynamicmonetization/provisioning/api/v1.0/instances/{customer_instance_id}/line-items/{activation_id}"
+    # Check if the line item state is OBSOLETE
+    if original_item.get("state") != "OBSOLETE":
+        messagebox.showwarning("Warning", "Line Items can only be deleted in an OBSOLETE state.")
+        return
 
-    # headers = {
-    #     "Authorization": f"Bearer {config['jwt']}",
-    #     "Content-Type": "application/json"
-    # }
+    # Confirm deletion
+    confirm_delete = messagebox.askyesno("Confirm Deletion", "Are you sure you want to delete this line item?")
+    if not confirm_delete:
+        return
 
-    # try:
-    #     messagebox.showinfo("Deleting: ", f"Deleting Line Item")
-    #     response = requests.delete(url, headers=headers)
-    #     if response.status_code in [200, 201]:         
-    #         messagebox.showinfo("Success: ", f"Successfully Deleted Line Item")
+    if env_var.get() == UAT_OPTION:
+        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_instance_id}/line-items/{activation_id}"
+    else:
+        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_instance_id}/line-items/{activation_id}"
 
-    #     else:
-    #         messagebox.showerror("Error", f"Failed to Delete Line Item: {response.status_code}\n{response.text}")
-    # except Exception as e:
-    #      messagebox.showerror("Error", f"Request failed: {str(e)}")   
-    messagebox.showinfo("Info: ", f"Deleted Line Item Not Implemented Now")
-    # get_customer_line_items()
+    headers = {
+        "Authorization": f"Bearer {config['jwt']}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        response = requests.delete(url, headers=headers)
+        if response.status_code == 204:
+            messagebox.showinfo("Success", "Successfully Deleted Line Item")
+            get_customer_line_items()  # Refresh the line items window
+        else:
+            messagebox.showerror("Error", f"Failed to Delete Line Item: {response.status_code}\n{response.text}")
+    except Exception as e:
+        messagebox.showerror("Error", f"Request failed: {str(e)}")
+
     return
 
 def open_calendar(label,calendar_start_date=None):
