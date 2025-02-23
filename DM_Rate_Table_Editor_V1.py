@@ -851,7 +851,7 @@ def edit_line_item():
 
         # Call API:
         # Determine API URL
-        url = build_base_url() + f"instances/{customer_instance_id}/line-items"
+        url = build_base_url() + f"/instances/{customer_instance_id}/line-items"
         headers = build_api_headers()
 
         # Prepare JSON payload of the updated item
