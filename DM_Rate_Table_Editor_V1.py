@@ -19,7 +19,7 @@ import ttkbootstrap as ttkb
 from ttkbootstrap.dialogs import DatePickerDialog
 
 UAT_OPTION = "-uat"
-REPORTING_APP_URL = "localhost"
+REPORTING_APP_URL = "127.0.0.1"
 PORT = 5000
 PERMANENT_EPOCH = 253402300799999
 ICON = "Revethon2025.ico"
@@ -732,6 +732,9 @@ def get_customer_line_items():
         # Populate the Treeview
         for row in formatted_data:
             line_items_table.insert("", "end", values=row)
+        
+        # Display Elastic Instance ID 
+        customer_id_label.config(text=f"Elastic Instance ID: {customer_id}")
     else:
         messagebox.showerror("Error", f"Failed to get line items: {response.status_code}")
 
@@ -1195,6 +1198,20 @@ edit_button.pack(side="left", padx=10)
 
 delete_button = ttk.Button(button_frame, text="Delete Line Item", command=delete_line_item, state=tk.DISABLED)
 delete_button.pack(side="left", padx=10)
+
+# Add customer ID label to the right of the Delete Line Item button
+customer_id_label = ttk.Label(button_frame, text="Elastic Instance ID: ", font=("Arial", 10, "normal"))
+customer_id_label.pack(side="left", padx=10)
+
+# Add copy button to the right of the Elastic Instance ID display
+def copy_to_clipboard():
+    root.clipboard_clear()
+    root.clipboard_append(edit_customer_id.get())
+    root.update()  # Now it stays on the clipboard after the window is closed
+    messagebox.showinfo("Copied", "Elastic Instance ID copied to clipboard")
+
+copy_button = ttk.Button(button_frame, text="Copy", command=copy_to_clipboard)
+copy_button.pack(side="left", padx=10)
 
 # Fetch and display logo
 response = requests.get(config['logo_url'])
