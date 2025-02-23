@@ -77,7 +77,21 @@ def read_config():
     except Exception as e:
         logging.error(f"Error reading config: {e}")
         return {}
+
+def build_base_url():
+    base_url = f"https://{config['site']}"
+    if env_var.get() == UAT_OPTION:
+        base_url += "-uat"
+    base_url += f".flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0"
+    return base_url
     
+def build_api_headers():
+    headers = {
+        "Authorization": f"Bearer {config['jwt']}",
+        "Content-Type": "application/json"
+    }
+    return headers
+
 @log_function_call
 def load_json(file_path):
     try:
@@ -160,15 +174,8 @@ def filter_series(input_series):
 
 def get_rate_tables(filtered=False):
     """Fetches rate tables from the API and displays them in a new window."""
-    if env_var.get() == UAT_OPTION:
-        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
-    else:
-        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
-    
-    headers = {
-        "Authorization": f"Bearer {config['jwt']}",
-        "Content-Type": "application/json"
-    }
+    url = build_base_url() + "/rate-tables"
+    headers = build_api_headers()
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         try:
@@ -290,15 +297,9 @@ def get_rate_tables(filtered=False):
                 selected_series_version = series_var.get()
                 selected_series, selected_version = selected_series_version.split(" - v")
                 
-                if env_var.get() == UAT_OPTION:
-                    url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables/?series={selected_series}&version={selected_version}"
-                else:
-                    url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables/?series={selected_series}&version={selected_version}"
-
-                headers = {
-                    "Authorization": f"Bearer {config['jwt']}",
-                    "Content-Type": "application/json"
-                }
+                url = build_base_url() + f"/rate-tables/?series={selected_series}&version={selected_version}"
+                headers = build_api_headers()
+                
                 response = requests.delete(url, headers=headers)
                 if response.status_code == 204:
                     messagebox.showinfo("Success", "Rate table deleted")
@@ -408,13 +409,8 @@ def post_to_site():
         #    json.dump(rate_table, json_file, indent=4)
 
         # Determine API endpoint
-        base_url = f"https://{config['site']}-uat" if env_var.get() == UAT_OPTION else f"https://{config['site']}"
-        api_url = f"{base_url}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
-
-        headers = {
-            "Authorization": f"Bearer {config['jwt']}",
-            "Content-Type": "application/json"
-        }
+        api_url = build_base_url() + "/rate-tables"
+        headers = build_api_headers()
         response = requests.post(api_url, headers=headers, json=rate_table)
 
         if response.status_code in [200, 201]:
@@ -455,15 +451,9 @@ def register_customer():
         return
 
     # Determine API URL
-    if env_var.get() == UAT_OPTION:
-        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
-    else:
-        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances"
+    url = build_base_url() + "/instances"
+    headers = build_api_headers()
 
-    headers = {
-        "Authorization": f"Bearer {config['jwt']}",
-        "Content-Type": "application/json"
-    }
 
     payload = {
         "shortName": customer_name,
@@ -508,15 +498,8 @@ def register_customer():
 
 def get_rate_tables_names():
     """Fetches the names of rate tables from the API."""
-    if env_var.get() == UAT_OPTION:
-        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
-    else:
-        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/rate-tables"
-    
-    headers = {
-        "Authorization": f"Bearer {config['jwt']}",
-        "Content-Type": "application/json"
-    }
+    url = build_base_url() + "/rate-tables"
+    headers = build_api_headers()
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         try:
@@ -552,15 +535,8 @@ def map_token_line_item(instance_id):
     
     # Call API
     # Determine API URL
-    if env_var.get() == UAT_OPTION:
-        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{instance_id}/line-items"
-    else:
-        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{instance_id}/line-items"
-
-    headers = {
-        "Authorization": f"Bearer {config['jwt']}",
-        "Content-Type": "application/json"
-    }
+    url = build_base_url() + f"/instances/{instance_id}/line-items"
+    headers = build_api_headers()
 
     line_item_payload = {
         "activationId": generate_uuid(),
@@ -678,15 +654,8 @@ def load_customer_names():
     excluded_prefixes = config.get("accountid_exclude_uat" if env_option == UAT_OPTION else "accountid_exclude_prod", [])
     excluded_prefixes = [prefix.lower() for prefix in excluded_prefixes]  # Ensure case-insensitive matching
 
-    if env_option == UAT_OPTION:
-        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
-    else:
-        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/?size=500"
-
-    headers = {
-        "Authorization": f"Bearer {config['jwt']}",
-        "Content-Type": "application/json"
-    }
+    url = build_base_url() + "/instances/?size=500"
+    headers = build_api_headers()
 
     try:
         response = requests.get(url, headers=headers)
@@ -727,13 +696,9 @@ def get_customer_line_items():
     customer_id = selected_customer["id"]
     edit_customer_id.set(customer_id)  # Set the customer ID for editing
     
-    if env_var.get() == UAT_OPTION:
-        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_id}/line-items"
-    else:
-        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_id}/line-items"
+    url = build_base_url() + f"/instances/{customer_id}/line-items"
+    headers = build_api_headers()
 
-    headers = {"Authorization": f"Bearer {config['jwt']}", "Content-Type": "application/json"}
-    
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         data = response.json()
@@ -883,15 +848,8 @@ def edit_line_item():
 
         # Call API:
         # Determine API URL
-        if env_var.get() == UAT_OPTION:
-            url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_instance_id}/line-items"
-        else:
-            url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_instance_id}/line-items"
-
-        headers = {
-            "Authorization": f"Bearer {config['jwt']}",
-            "Content-Type": "application/json"
-        }
+        url = build_base_url() + f"instances/{customer_instance_id}/line-items"
+        headers = build_api_headers()
 
         # Prepare JSON payload of the updated item
         json_payload = json.dumps(original_item)
@@ -942,15 +900,8 @@ def delete_line_item():
     if not confirm_delete:
         return
 
-    if env_var.get() == UAT_OPTION:
-        url = f"https://{config['site']}-uat.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_instance_id}/line-items/{activation_id}"
-    else:
-        url = f"https://{config['site']}.flexnetoperations.{config['geo']}/dynamicmonetization/provisioning/api/v1.0/instances/{customer_instance_id}/line-items/{activation_id}"
-
-    headers = {
-        "Authorization": f"Bearer {config['jwt']}",
-        "Content-Type": "application/json"
-    }
+    url = build_base_url() + f"/instances/{customer_instance_id}/line-items/{activation_id}"
+    headers = build_api_headers()
 
     try:
         response = requests.delete(url, headers=headers)
@@ -1246,7 +1197,6 @@ delete_button = ttk.Button(button_frame, text="Delete Line Item", command=delete
 delete_button.pack(side="left", padx=10)
 
 # Fetch and display logo
-# logo_url = "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revethon_logo"
 response = requests.get(config['logo_url'])
 if response.status_code == 200:
     image_data = Image.open(BytesIO(response.content)).resize((250, 56), Image.Resampling.LANCZOS)
