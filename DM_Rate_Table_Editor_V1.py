@@ -402,8 +402,9 @@ def post_to_site():
                         "version": parts[1].strip(),
                         "rate": float(parts[2].strip())
                     })
-
+        ############################################################
         # Write to JSON file  Enable for debug only
+        ############################################################
         #with open("rate_table_start_date_table.json", "w") as json_file:
         #    json.dump(rate_table, json_file, indent=4)
 
@@ -460,7 +461,7 @@ def register_customer():
     }
 
     try:
-        #check to see if the customer already exists
+        # Check to see if the customer already exists
         query_params = {
             "accountId": customer_id,
             "default": True
@@ -533,7 +534,6 @@ def map_token_line_item(instance_id):
         end_epoch = convert_date_to_epoch(end_date)
     
     # Call API
-    # Determine API URL
     url = build_base_url() + f"/instances/{instance_id}/line-items"
     headers = build_api_headers()
 
@@ -790,7 +790,7 @@ def edit_line_item():
     edit_start_date_btn.grid(row=3, column=2, padx=10)
 
 
-    # End Dateold_end_date
+    # End Date
     old_end_date = item_values[1]
     edit_end_date_frame = tk.Frame(edit_window)
     edit_end_date_frame.grid(row=4, column=0,sticky="w", pady=20, padx=20)
@@ -849,7 +849,6 @@ def edit_line_item():
         customer_instance_id = edit_customer_id.get()
 
         # Call API:
-        # Determine API URL
         url = build_base_url() + f"/instances/{customer_instance_id}/line-items"
         headers = build_api_headers()
 
