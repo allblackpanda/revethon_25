@@ -877,7 +877,7 @@ def edit_line_item():
     edit_apply_btn = ttk.Button(edit_button_frame, text="Apply Changes", command=apply_changes, width=14)
     edit_apply_btn.grid(row=6, column=0)
     edit_cancel_btn = ttk.Button(edit_button_frame, text="Cancel", command=edit_window.destroy, width=14)
-    edit_cancel_btn.grid(row=6, column=5, padx=320)
+    edit_cancel_btn.grid(row=6, column=5, padx=260)
 
 def delete_line_item():
     """Deletes the selected line item."""
