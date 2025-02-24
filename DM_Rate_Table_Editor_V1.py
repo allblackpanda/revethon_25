@@ -17,6 +17,10 @@ import uuid
 from io import BytesIO
 import ttkbootstrap as ttkb
 from ttkbootstrap.dialogs import DatePickerDialog
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import socket
 
 UAT_OPTION = "-uat"
 REPORTING_APP_URL = "127.0.0.1"
@@ -945,9 +949,11 @@ def on_table_select(event):
     if selected:
         edit_button.config(state=tk.NORMAL)
         delete_button.config(state=tk.NORMAL)
+        email_button.config(state=tk.NORMAL)
     else:
         edit_button.config(state=tk.DISABLED)
         delete_button.config(state=tk.DISABLED)
+        email_button.config(state=tk.DISABLED)
 
 # Function to toggle the date fields based on checkbox state
 def toggle_permanent():
@@ -966,6 +972,87 @@ def get_default_date():
     day = today.strftime("%d")
     return f"{year}-{month}-{day}"
 
+def send_email(to_address, subject, body):
+    """Send an email with the specified subject and body to the given address."""
+    config = read_config()
+    try:
+        from_address = config['from_email']
+        password = config['email_pwd']
+        smtp_server = config['smtp_server']  # Ensure this is the correct SMTP server address
+    except KeyError as e:
+        messagebox.showerror("Configuration Error", f"Missing configuration key: {str(e)}")
+        return
+
+    smtp_port = 587  # Ensure this is the correct SMTP port
+
+    msg = MIMEMultipart()
+    msg['From'] = from_address
+    msg['To'] = to_address
+    msg['Subject'] = subject
+
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        # Verify SMTP server address
+        socket.gethostbyname(smtp_server)
+        
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(from_address, password)
+        text = msg.as_string()
+        server.sendmail(from_address, to_address, text)
+        server.quit()
+        messagebox.showinfo("Success", "Email sent successfully")
+    except smtplib.SMTPAuthenticationError:
+        messagebox.showerror("Authentication Error", "Failed to authenticate with the SMTP server. Please check your username and password.")
+    except smtplib.SMTPConnectError:
+        messagebox.showerror("Connection Error", "Failed to connect to the SMTP server. Please check the server address and port.")
+    except smtplib.SMTPException as e:
+        messagebox.showerror("SMTP Error", f"An SMTP error occurred: {str(e)}")
+    except socket.gaierror as e:
+        messagebox.showerror("Address Error", f"Address-related error connecting to server: {str(e)}. Please check the SMTP server address.")
+    except Exception as e:
+        messagebox.showerror("Error", f"An unexpected error occurred: {str(e)}")
+
+def email_line_item():
+    """Prompt the user to enter an email address and send the selected line item."""
+    selected_item = line_items_table.selection()
+    if not selected_item:
+        messagebox.showerror("Error", "Please select a line item to email.")
+        return
+
+    item_values = line_items_table.item(selected_item, "values")
+    item_string = item_values[7]
+    original_item = json.loads(item_string)
+
+    email_window = Toplevel(root)
+    email_window.title("Send Email")
+    email_window.geometry("300x150")
+    email_window.iconbitmap(ICON)
+
+    tk.Label(email_window, text="Email Address:").pack(pady=5)
+    email_entry = tk.Entry(email_window)
+    email_entry.pack(pady=5)
+
+    def send():
+        to_address = email_entry.get()
+        if not to_address:
+            messagebox.showerror("Error", "Email address is required.")
+            return
+
+        subject = "Token Order Details"
+        body = (
+            f"Elastic Instance ID:\t{edit_customer_id.get()}\n\n"
+            f"Token Quantity:\t\t{original_item.get('quantity', 'N/A')}\n"
+            f"Quantity Used:\t\t{float(original_item.get('used', 0)):.2f}\n\n"
+            f"Start Date:\t\t{convert_epoch_to_date(original_item.get('start', 0)).split()[0]}\n"
+            f"End Date:\t\t{'Permanent' if original_item.get('end', 0) == PERMANENT_EPOCH else convert_epoch_to_date(original_item.get('end', 0)).split()[0]}\n"
+        )
+
+        send_email(to_address, subject, body)
+        email_window.destroy()
+
+    tk.Button(email_window, text="Send", command=send).pack(pady=10)
 
 ############################################################################################################
 # Main Window Development
@@ -1204,6 +1291,10 @@ edit_button.pack(side="left", padx=10)
 delete_button = ttk.Button(button_frame, text="Delete Line Item", command=delete_line_item, state=tk.DISABLED)
 delete_button.pack(side="left", padx=10)
 
+# Add email button to the right of the Delete Line Item button
+email_button = ttk.Button(button_frame, text="Email Line Item", command=email_line_item, state=tk.DISABLED)
+email_button.pack(side="left", padx=10)
+
 # Add customer ID label to the right of the Delete Line Item button
 customer_id_label = ttk.Label(button_frame, text="Elastic Instance ID: ", font=("Arial", 10, "normal"))
 customer_id_label.pack(side="left", padx=10)
@@ -1217,6 +1308,7 @@ def copy_to_clipboard():
 
 copy_button = ttk.Button(button_frame, text="Copy", command=copy_to_clipboard)
 copy_button.pack(side="left", padx=10)
+
 
 # Fetch and display logo
 response = requests.get(config['logo_url'])

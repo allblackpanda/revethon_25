@@ -8,6 +8,9 @@
         "accountid_exclude_uat": ["Cust-ID","test","{CUST","Zerox","A123","Cust_id"],
         "accountid_exclude_prod": ["ACME Elastic Customer"],
         "basic_Auth": "c2VkZW1vQGZsZXhlcmEuY29tOkZsZXg0YWxs",
+        "from_email": "jim.berthold@gmail.com",
+        "email_pwd": "srju cbjh xgzh yjrd",
+        "smtp_server": "smtp.gmail.com",
         "jwt": "jwt.txt",
         "logo_url": "https://flex1107-esd.flexnetoperations.com/flexnet/operations/WebContent?fileID=revethon_logo"
     },
