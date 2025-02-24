@@ -136,7 +136,6 @@ def start_reporting():
                 messagebox.showerror("Error", "Error opening chrome. Please check the log file")
 
     threading.Thread(target=open_browser, daemon=True).start()
-    messagebox.showinfo("Running",f"If your browser hasn't opened up, you should go to the url: localhost:{port}")
 
 @log_function_call
 def convert_date_to_epoch(date_str, date_format='%Y-%m-%d'):
