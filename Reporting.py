@@ -74,7 +74,12 @@ def get_data():
     else:
         account_options = []
 
-    return jsonify({'accounts': account_options, 'data': df.to_dict(orient='records')})
+    # Include the site information from config
+    return jsonify({
+        'accounts': account_options, 
+        'data': df.to_dict(orient='records'),
+        'site': config.get('site', '')
+    })
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

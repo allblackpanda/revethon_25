@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +22,18 @@
     </div>
 
     <div class="container mt-5">
-        <h1 class="mb-4">Reporting Dashboard</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-baseline">
+                <h1 class="mb-0">Reporting Dashboard</h1>
+                <span id="site-label" class="ms-3 text-secondary" style="font-size: 0.9rem;"></span>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="darkModeSwitch" onchange="toggleDarkMode()">
+                <label class="form-check-label" for="darkModeSwitch">
+                    <i class="bi bi-moon-stars"></i> Dark Mode
+                </label>
+            </div>
+        </div>
         <div class="d-flex justify-content-between align-items-start mb-3">
             <div style="width: 200px;">
                 <label for="account-dropdown" class="form-label">Select Customer Account</label>
@@ -100,6 +111,10 @@
             z-index: 1000;
         }
 
+        html[data-bs-theme="dark"] .loading-overlay {
+            background-color: rgba(33, 37, 41, 0.8);
+        }
+
         .spinner-container {
             text-align: center;
         }
@@ -112,6 +127,11 @@
             opacity: 0.5;
             pointer-events: none;
         }
+
+        /* Dark mode chart styles */
+        html[data-bs-theme="dark"] .chartjs-render-monitor {
+            filter: invert(1) hue-rotate(180deg);
+        }
     </style>
 
     <script>
@@ -119,6 +139,7 @@
         let summaryChartInstance = null;
         let denialChartInstance = null;
         let allData = [];
+        let currentTheme = 'light';
         const responseCodes = {
             "306": "Insufficient elastic tokens available",
             "101": "Successful item checkout",
@@ -126,6 +147,44 @@
             "301": "No Valid active line items",
             "201": "Item not found in any effective rate table"
         };
+
+        // Check for saved preference and apply it
+        function initTheme() {
+            const savedTheme = localStorage.getItem('dashboard-theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-bs-theme', savedTheme);
+                document.getElementById('darkModeSwitch').checked = savedTheme === 'dark';
+                currentTheme = savedTheme;
+            }
+        }
+
+        // Initialize theme when page loads
+        document.addEventListener('DOMContentLoaded', initTheme);
+
+        function toggleDarkMode() {
+            const isDarkMode = document.getElementById('darkModeSwitch').checked;
+            const newTheme = isDarkMode ? 'dark' : 'light';
+            
+            document.documentElement.setAttribute('data-bs-theme', newTheme);
+            localStorage.setItem('dashboard-theme', newTheme);
+            currentTheme = newTheme;
+            
+            // Refresh charts with the new theme
+            if (allData.length > 0) {
+                const selectedAccount = document.getElementById('account-dropdown').value;
+                const filteredData = allData.filter(item => item.accountId === selectedAccount);
+                updateChartsForTheme(filteredData);
+            }
+        }
+
+        function updateChartsForTheme(data) {
+            if (data.length > 0) {
+                // Regenerate all charts with theme-specific colors
+                generateUsageChart(data);
+                generateSummaryChart(data);
+                generateDenialChart(data);
+            }
+        }
 
         function setLoading(isLoading) {
             const loadingOverlay = document.getElementById('loadingOverlay');
@@ -157,8 +216,15 @@
                 environment: environment
             })
             .then(response => {
-                const { accounts, data } = response.data;
+                const { accounts, data, site } = response.data;
                 allData = data;
+                
+                // Update site label
+                const siteLabel = document.getElementById('site-label');
+                if (site) {
+                    siteLabel.textContent = `Site: ${site}`;
+                }
+                
                 let dropdown = document.getElementById('account-dropdown');
                 dropdown.innerHTML = accounts.length 
                     ? accounts.map(acc => `<option value="${acc}">${acc}</option>`).join('') 
@@ -197,7 +263,37 @@
             `;
         }
 
-        // [Previous chart generation functions remain the same]
+        function getChartColors() {
+            // Return different colors based on current theme
+            if (currentTheme === 'dark') {
+                return {
+                    line: {
+                        border: 'rgba(75, 192, 192, 1)',
+                        background: 'rgba(75, 192, 192, 0.2)'
+                    },
+                    bar: {
+                        border: 'rgba(54, 162, 235, 1)',
+                        background: 'rgba(54, 162, 235, 0.6)'
+                    },
+                    text: '#fff',
+                    grid: 'rgba(255, 255, 255, 0.1)'
+                };
+            } else {
+                return {
+                    line: {
+                        border: 'rgba(75, 192, 192, 1)',
+                        background: 'rgba(75, 192, 192, 0.2)'
+                    },
+                    bar: {
+                        border: 'rgba(54, 162, 235, 1)',
+                        background: 'rgba(54, 162, 235, 0.6)'
+                    },
+                    text: '#666',
+                    grid: 'rgba(0, 0, 0, 0.1)'
+                };
+            }
+        }
+
         function generateUsageChart(data) {
             const ctx = document.getElementById('usageChart').getContext('2d');
             
@@ -213,6 +309,8 @@
                 chartInstance.destroy();
             }
 
+            const colors = getChartColors();
+
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -220,8 +318,8 @@
                     datasets: [{
                         label: 'Usage Over Time',
                         data: data.map(item => item.used),
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: colors.line.border,
+                        backgroundColor: colors.line.background,
                         borderWidth: 2,
                         pointRadius: 3
                     }]
@@ -230,8 +328,23 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { title: { display: true, text: 'Time' } },
-                        y: { title: { display: true, text: 'Usage' } }
+                        x: { 
+                            title: { display: true, text: 'Time', color: colors.text },
+                            grid: { color: colors.grid },
+                            ticks: { color: colors.text }
+                        },
+                        y: { 
+                            title: { display: true, text: 'Usage', color: colors.text },
+                            grid: { color: colors.grid },
+                            ticks: { color: colors.text }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: colors.text
+                            }
+                        }
                     }
                 }
             });
@@ -273,9 +386,8 @@
             const labels = Object.keys(filteredData);
             const values = Object.values(filteredData);
             
-            if (summaryChartInstance) {
-                summaryChartInstance.destroy();
-            }
+            const colors = getChartColors();
+            
             summaryChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -283,8 +395,8 @@
                     datasets: [{
                         label: 'Aggregate Meter Quantity',
                         data: values,
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: colors.bar.background,
+                        borderColor: colors.bar.border,
                         borderWidth: 1
                     }]
                 },
@@ -292,8 +404,23 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { title: { display: true, text: 'Item - Item Version' } },
-                        y: { title: { display: true, text: 'Meter Quantity' } }
+                        x: { 
+                            title: { display: true, text: 'Item - Item Version', color: colors.text },
+                            grid: { color: colors.grid },
+                            ticks: { color: colors.text }
+                        },
+                        y: { 
+                            title: { display: true, text: 'Meter Quantity', color: colors.text },
+                            grid: { color: colors.grid },
+                            ticks: { color: colors.text }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: colors.text
+                            }
+                        }
                     }
                 }
             });
@@ -323,7 +450,13 @@
             const values = [];
             const backgroundColor = [];
             
-            const colorMap = {
+            // Adjust colors based on theme
+            const colorMap = currentTheme === 'dark' ? {
+                "101": "rgba(75, 192, 75, 0.8)",    // Green (brighter for dark mode)
+                "306": "rgba(255, 99, 132, 0.8)",   // Red (brighter for dark mode)
+                "102": "rgba(150, 150, 150, 0.8)",  // Gray (brighter for dark mode)
+                "201": "rgba(255, 159, 64, 0.8)"    // Orange (brighter for dark mode)
+            } : {
                 "101": "rgba(75, 192, 75, 0.6)",    // Green
                 "306": "rgba(255, 99, 132, 0.6)",   // Red
                 "102": "rgba(128, 128, 128, 0.6)",  // Gray
@@ -340,6 +473,8 @@
                 denialChartInstance.destroy();
             }
             
+            const colors = getChartColors();
+            
             denialChartInstance = new Chart(ctx, {
                 type: 'pie',
                 data: {
@@ -354,6 +489,11 @@
                 options: {
                     responsive: true,
                     plugins: {
+                        legend: {
+                            labels: {
+                                color: colors.text
+                            }
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function(tooltipItem) {
@@ -402,4 +542,3 @@
     </script>
 </body>
 </html>
-
