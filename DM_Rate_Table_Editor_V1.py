@@ -73,7 +73,14 @@ def read_config():
         with open(CONFIG_FILE, 'r') as file:
             json_file = json.load(file)
             selected_config = json_file[config_parameter]
+        try:
+            with open(selected_config['jwt'], 'r') as jwt_file:
+                jwt = jwt_file.read().strip()
+                selected_config['jwt'] = jwt
             return selected_config
+        except Exception as f:
+            logging.error(f"Error reading JWT File: {f}")
+            return {}
     except Exception as e:
         logging.error(f"Error reading config: {e}")
         return {}
