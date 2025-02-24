@@ -156,7 +156,7 @@ def filter_series(input_series):
     for item in input_series:
         item_series = item.get("series", "")
         item_version = float(item.get("version", 0))
-        effective_from = item.get("effectiveFrom", "")  # Ensure it's a string
+        effective_from = item.get("effectiveFrom", "").split()[0]  # Strips the time, keeping only the date
 
         # Convert effective_from date to epoch
         effective_from_epoch = convert_date_to_epoch(effective_from)
