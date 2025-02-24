@@ -385,12 +385,11 @@
             }
             
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Usage Time,Used,Meter Quantity,Item,Item Version,Response Code\n";
-            
+            csvContent += "Correlation ID,Usage Time,Write Time,Account ID,Account Name,Consumer ID,Consumer Type,Meter,Meter Type,Meter Cost,Meter Quantity,Item,Item Version,Item Quantity,Activation ID,Instance ID,Mapped Entitled Count,Tokens Used,Session ID,Session State,Request Response Code,Overdraft Count\n";
             filteredData.forEach(item => {
-                csvContent += `${item.usageTime},${item.used},${item.meterQuantity},${item.item},${item.itemVersion},${item.requestResponse}\n`;
+                csvContent += `${item.correlationId},${item.usageTime},${item.writeTime},${item.accountId},${item.accountName},${item.consumerId},${item.consumerType},${item.meter},${item.meterType},${item.meterCost},${item.meterQuantity},${item.item},${item.itemVersion},${item.itemQuantity},${item.activationId},${item.instanceId},${item.mappedEntitledCount},${item.used}${item.sessionId},${item.sessionState},${item.requestResponse},${item.overdraftCount}\n`;
             });
-            
+
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             const today = new Date().toISOString().split('T')[0];
@@ -403,3 +402,4 @@
     </script>
 </body>
 </html>
+
