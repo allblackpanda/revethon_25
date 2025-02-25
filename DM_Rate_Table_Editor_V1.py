@@ -372,8 +372,8 @@ def get_rate_tables(filtered=False):
                         series_window.lift()  # Keep window in focus
                         series_window.focus_force()
     
-        copy_button = tk.Button(series_window, text="Copy to Rate Table Editor", command=copy_to_main)
-        copy_button.pack(side="left", padx=25, pady=10)
+        copy_button = tk.Button(series_window, text="Copy to Rate Table Editor", command=copy_to_main, width=25)
+        copy_button.pack(side="left", padx=10, pady=10)
 
         delete_button = Button(
             series_window, 
@@ -383,7 +383,7 @@ def get_rate_tables(filtered=False):
             )
         delete_button.pack(side="left", padx=10, pady=10)
         
-        close_button = tk.Button(series_window, text="Close", command=series_window.destroy)
+        close_button = tk.Button(series_window, text="Close", command=series_window.destroy, width=8)
         close_button.pack(side="right", padx=10, pady=10)
 
         show_series()
