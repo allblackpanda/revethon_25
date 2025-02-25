@@ -262,24 +262,38 @@ def get_rate_tables(filtered=False):
                     series_info = series_data[0]
                     series_info['effectiveFrom'] = format_date(series_info.get('effectiveFrom', ''))
                     series_info['created'] = format_date(series_info.get('created', ''))
-                    formatted_output = (
-                        f"Series Name:\t\t{series_info.get('series', '')}\n"
-                        f"Series Version:\t\t{series_info.get('version', '')}\n\n"
-                        f"Start Date:\t\t{series_info.get('effectiveFrom', '')}\n"
-                        f"Created Date:\t\t{series_info.get('created', '')}\n\n"
-                        f"{'Item Name'}\t\t\t{'Version'}\t\t{'Rate'}\n"
-                        f"{'-'*65}\n"
-                    )
-                    
-                    for item in series_info.get("items", []):
-                        formatted_output += (
-                            f"{item.get('name', '')}\t\t\t{item.get('version', '')}\t\t{str(item.get('rate', ''))}\n"
-                        )
-                    
+
+                    # Clear the text area and configure it for bold text
                     series_text_area.config(state="normal")
                     series_text_area.delete("1.0", "end")
-                    series_text_area.insert("1.0", formatted_output)
+
+                    # Add bold tag
+                    series_text_area.tag_configure("bold", font=("Arial", 10, "bold"))
+
+                    # Insert formatted text with bold tags
+                    series_text_area.insert("end", "Series Name:\t\t", "bold")
+                    series_text_area.insert("end", f"{series_info.get('series', '')}\n")
+
+                    series_text_area.insert("end", "Series Version:\t\t", "bold")
+                    series_text_area.insert("end", f"{series_info.get('version', '')}\n\n")
+
+                    series_text_area.insert("end", "Start Date:\t\t", "bold")
+                    series_text_area.insert("end", f"{series_info.get('effectiveFrom', '')}\n")
+
+                    series_text_area.insert("end", "Created Date:\t\t", "bold")
+                    series_text_area.insert("end", f"{series_info.get('created', '')}\n\n")
+
+                    series_text_area.insert("end", "Item Name\t\t\tVersion\t\tRate\n", "bold")
+                    series_text_area.insert("end", f"{'-'*65}\n")
+
+                    for item in series_info.get("items", []):
+                        series_text_area.insert(
+                            "end", 
+                            f"{item.get('name', '')}\t\t\t{item.get('version', '')}\t\t{str(item.get('rate', ''))}\n"
+                        )
+
                     series_text_area.config(state="disabled")
+
 
             def copy_to_main():
                 """Copies the selected rate table series to the main text area."""
@@ -293,15 +307,47 @@ def get_rate_tables(filtered=False):
 
                 main_text_area.config(state="normal")
                 main_text_area.delete("1.0", "end")
-                main_text_area.insert("1.0", text_data)
-                
+
+                # Add bold tag for the main text area
+                main_text_area.tag_configure("bold", font=("Arial", 10, "bold"))
+
+                # Insert formatted text with bold tags into the main text area
+                lines = text_data.split('\n')
+                for line in lines:
+                    if line.startswith("Series Name:"):
+                        main_text_area.insert("end", "Series Name:\t\t", "bold")
+                        main_text_area.insert("end", line.split("Series Name:")[1].strip() + "\n")
+                    
+                    elif line.startswith("Series Version:"):
+                        main_text_area.insert("end", "Series Version:\t\t", "bold")
+                        main_text_area.insert("end", line.split("Series Version:")[1].strip() + "\n\n")
+                    
+                    elif line.startswith("Start Date:"):
+                        main_text_area.insert("end", "Start Date:\t\t", "bold")
+                        main_text_area.insert("end", line.split("Start Date:")[1].strip() + "\n")
+                    
+                    elif line.startswith("Created Date:"):
+                        main_text_area.insert("end", "Created Date:\t\t", "bold")
+                        main_text_area.insert("end", line.split("Created Date:")[1].strip() + "\n\n")
+                    
+                    elif line.startswith("Item Name"):
+                        main_text_area.insert("end", "Item Name\t\t\tVersion\t\tRate\n", "bold")
+                    
+                    elif "------" in line:
+                        main_text_area.insert("end", f"{'-'*65}\n")
+                    
+                    else:
+                        main_text_area.insert("end", line + "\n")
+
+                main_text_area.config(state="disabled")
                 result_label.config(text="Rate table successfully copied")
                 date_button.config(state=tk.NORMAL)
                 post_site_button.config(state=tk.NORMAL)
                 increment_version_button.config(state=tk.NORMAL)
                 clear_editor_button.config(state=tk.NORMAL)
-                
+
                 series_window.destroy()
+
 
             def delete_rate_table():
                 """Deletes the selected rate table series and version."""
@@ -1124,12 +1170,13 @@ increment_version_button = ttk.Button(rate_table_tab, text="Increment Series Ver
 increment_version_button.place(x=10, y=220)
 date_button = ttk.Button(rate_table_tab, text="Select New Start Date", command=rate_table_start_date, padding=(5, 7), width=button_width, state=tk.DISABLED)
 date_button.place(x=10, y=270)
+post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
+post_site_button.place(x=10, y=320)
 
 clear_editor_button = ttk.Button(rate_table_tab, text="Clear Editor", command=clear_editor, padding=(5, 7), width=button_width, state=tk.DISABLED)
 clear_editor_button.place(x=810, y=120)
 
-post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", command=post_to_site, padding=(5, 7), width=button_width, state=tk.DISABLED)
-post_site_button.place(x=810, y=270)
+
 
 # Text Area for Rate Table
 main_text_area = Text(rate_table_tab, wrap="word", height=20, width=50)
@@ -1148,8 +1195,28 @@ bottom_frame_existing_customer_tab = ttk.Frame(existing_customer_tab)
 bottom_frame_existing_customer_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
 
 # User Guide and API Reference Buttons
-ttk.Button(bottom_frame_rate_table_tab, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
-ttk.Button(bottom_frame_rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
+dmug_button = Button(
+            bottom_frame_rate_table_tab, 
+            text="Dynamic Monetization User Guide", 
+            command=open_user_guide,
+            bootstyle="success",
+            padding=(5,7),
+            width=30
+            )
+dmug_button.pack(side="left", padx=10, pady=10)
+apiref_button = Button(
+            bottom_frame_rate_table_tab, 
+            text="Rate Table API Reference", 
+            command=open_api_ref,
+            bootstyle="success",
+            padding=(5,7),
+            width=30
+            )
+apiref_button.pack(side="left", padx=10, pady=10)
+
+
+#ttk.Button(bottom_frame_rate_table_tab, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
+#ttk.Button(bottom_frame_rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
 # Create a new button in bottom_frame_existing_customer_tab
 
 
@@ -1275,17 +1342,21 @@ customer_dropdown = ttk.Combobox(existing_customer_tab, textvariable=selected_ac
 customer_dropdown.bind("<<ComboboxSelected>>", lambda event: get_customer_line_items())
 customer_dropdown.pack()
 
-# Creating the Treeview Widget
+# Create a style for the Treeview heading to make it bold
+style = ttk.Style()
+style.configure("Treeview.Heading", font=("Arial", 10, "bold"), anchor="w", padding=[ 0, 20])
+
+# Creating the Treeview Widget with bold headings
 columns = ("Start Date", "End Date", "Quantity", "Used", "% Used", "Rate Table Series", "State")
-line_items_table = ttk.Treeview(existing_customer_tab, columns=columns, show="headings", height=15)
+line_items_table = ttk.Treeview(existing_customer_tab, columns=columns, show="headings", height=15, style="Treeview")
+
 line_items_table.bind("<<TreeviewSelect>>", on_table_select)
 line_items_table.bind("<Double-1>", lambda event: edit_line_item())  # Bind double-click event to edit_line_item
 
 # Define column headings
 for col in columns:
     line_items_table.heading(col, text=col, anchor="w")  # Align left
-    line_items_table.column(col, width=120, anchor="w")  # Align left
-    line_items_table.tag_configure("heading", font=("Arial", 10, "bold"))  # Bold headings
+    line_items_table.column(col, width=120, anchor="w", stretch=True)  # Align left and allow stretching
 
 line_items_table.pack(fill="both", expand=True, pady=20)
 
@@ -1296,6 +1367,11 @@ edit_customer_id = tk.StringVar(button_frame)
 edit_button = ttk.Button(button_frame, text="Edit Line Item", command=edit_line_item, state=tk.DISABLED)
 edit_button.pack(side="left", padx=10)
 
+# Add email button 
+email_button = ttk.Button(button_frame, text="Email Line Item", command=email_line_item, state=tk.DISABLED)
+email_button.pack(side="left", padx=10)
+
+# Add Delete button 
 delete_button = Button(
             button_frame, 
             text="Delete Line Item", 
@@ -1305,10 +1381,13 @@ delete_button = Button(
             )
 delete_button.pack(side="left", padx=10)
 
-# Add email button to the right of the Delete Line Item button
-email_button = ttk.Button(button_frame, text="Email Line Item", command=email_line_item, state=tk.DISABLED)
-email_button.pack(side="left", padx=10)
-reporting_button = ttk.Button(button_frame, text="Reporting", command=start_reporting)
+# Add Reporting button 
+reporting_button = Button(
+            button_frame, 
+            text="Reporting", 
+            command=start_reporting,
+            bootstyle="info"
+            )
 reporting_button.pack(side="left", padx=10)
 
 # Add customer ID label to the right of the Delete Line Item button
