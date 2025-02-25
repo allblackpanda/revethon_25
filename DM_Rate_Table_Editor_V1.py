@@ -17,6 +17,7 @@ import uuid
 from io import BytesIO
 import ttkbootstrap as ttkb
 from ttkbootstrap.dialogs import DatePickerDialog
+from ttkbootstrap import Button
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -323,8 +324,15 @@ def get_rate_tables(filtered=False):
     
         copy_button = tk.Button(series_window, text="Copy to Rate Table Editor", command=copy_to_main)
         copy_button.pack(side="left", padx=25, pady=10)
-        delete_button = tk.Button(series_window, text="Delete Rate Table", command=delete_rate_table, fg="red")
+
+        delete_button = Button(
+            series_window, 
+            text="Delete Rate Table", 
+            command=delete_rate_table, 
+            bootstyle="danger"
+            )
         delete_button.pack(side="left", padx=10, pady=10)
+        
         close_button = tk.Button(series_window, text="Close", command=series_window.destroy)
         close_button.pack(side="right", padx=10, pady=10)
 
@@ -684,7 +692,8 @@ def load_customer_names():
                     "id": entry["id"]
                 })
             
-            customer_data.sort(key=lambda x: x["accountId"], reverse=(env_option == UAT_OPTION))  # Sort descending for UAT
+            #customer_data.sort(key=lambda x: x["accountId"], reverse=(env_option == UAT_OPTION))  # Sort descending for UAT
+            customer_data.sort(key=lambda x: x["accountId"].lower())
         else:
             messagebox.showerror("Error", f"Failed to get customer list: {response.status_code}\n{response.text}")
     except Exception as e:
@@ -1287,7 +1296,13 @@ edit_customer_id = tk.StringVar(button_frame)
 edit_button = ttk.Button(button_frame, text="Edit Line Item", command=edit_line_item, state=tk.DISABLED)
 edit_button.pack(side="left", padx=10)
 
-delete_button = ttk.Button(button_frame, text="Delete Line Item", command=delete_line_item, state=tk.DISABLED)
+delete_button = Button(
+            button_frame, 
+            text="Delete Line Item", 
+            command=delete_line_item,
+            state=tk.DISABLED, 
+            bootstyle="danger"
+            )
 delete_button.pack(side="left", padx=10)
 
 # Add email button to the right of the Delete Line Item button
