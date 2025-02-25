@@ -1026,11 +1026,11 @@ def email_line_item():
     original_item = json.loads(item_string)
 
     email_window = Toplevel(root)
-    email_window.title("Send Email")
+    email_window.title("Email Line Item Details")
     email_window.geometry("450x150+700+450")
     email_window.iconbitmap(ICON)
 
-    tk.Label(email_window, text="Email Address:").pack(pady=5)
+    tk.Label(email_window, text="Enter Customer Email Address:").pack(pady=5)
     email_entry = tk.Entry(email_window, width=40)
     email_entry.pack(pady=5)
 
@@ -1052,7 +1052,7 @@ def email_line_item():
         send_email(to_address, subject, body)
         email_window.destroy()
 
-    tk.Button(email_window, text="Send", command=send).pack(pady=10)
+    tk.Button(email_window, text="Send Email", command=send, width=15).pack(pady=10)
 
 ############################################################################################################
 # Main Window Development
