@@ -187,6 +187,12 @@ def filter_series(input_series):
 
 def get_rate_tables(filtered=False):
     """Fetches rate tables from the API and displays them in a new window."""
+    global series_window  # Use the global variable to track the rate table window
+
+    # Close any previously opened rate table window
+    if series_window is not None and series_window.winfo_exists():
+        series_window.destroy()
+
     url = build_base_url() + "/rate-tables"
     headers = build_api_headers()
     response = requests.get(url, headers=headers)
