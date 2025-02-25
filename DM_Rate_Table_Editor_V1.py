@@ -744,7 +744,7 @@ def get_customer_line_items():
             line_items_table.insert("", "end", values=row)
         
         # Display Elastic Instance ID 
-        customer_id_label.config(text=f"Elastic Instance ID: {customer_id}")
+        customer_id_label.config(text=f"Instance ID: {customer_id}", padding=0)
     else:
         messagebox.showerror("Error", f"Failed to get line items: {response.status_code}")
 
@@ -1142,8 +1142,7 @@ bottom_frame_existing_customer_tab.pack(side="bottom", fill="x", pady=10)  # Anc
 ttk.Button(bottom_frame_rate_table_tab, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
 ttk.Button(bottom_frame_rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
 # Create a new button in bottom_frame_existing_customer_tab
-reporting_button = ttk.Button(bottom_frame_rate_table_tab, text="Open Reporting Dashboard", command=start_reporting, padding=(5, 7))
-reporting_button.pack(side="left", padx=10, pady=5)
+
 
 # Place the "Exit" button on the bottom right
 exit_button1 = ttk.Button(bottom_frame_rate_table_tab, text="Exit", command=root.quit, padding=(20, 5))
@@ -1294,10 +1293,12 @@ delete_button.pack(side="left", padx=10)
 # Add email button to the right of the Delete Line Item button
 email_button = ttk.Button(button_frame, text="Email Line Item", command=email_line_item, state=tk.DISABLED)
 email_button.pack(side="left", padx=10)
+reporting_button = ttk.Button(button_frame, text="Reporting", command=start_reporting)
+reporting_button.pack(side="left", padx=10)
 
 # Add customer ID label to the right of the Delete Line Item button
-customer_id_label = ttk.Label(button_frame, text="Elastic Instance ID: ", font=("Arial", 10, "normal"))
-customer_id_label.pack(side="left", padx=10)
+customer_id_label = ttk.Label(button_frame, text="Instance ID: ", font=("Arial", 10, "normal"))
+customer_id_label.pack(side="left", padx=30)
 
 # Add copy button to the right of the Elastic Instance ID display
 def copy_to_clipboard():
