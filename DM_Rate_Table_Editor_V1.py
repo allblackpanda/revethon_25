@@ -430,7 +430,7 @@ def increment_version():
         else:
             main_text_area.insert("end", line + "\n")
 
-    main_text_area.config(state="disabled")
+    main_text_area.config(state="normal")
     result_label.config(text="Series Version incremented successfully")
 
 
@@ -476,7 +476,7 @@ def rate_table_start_date():
             else:
                 main_text_area.insert("end", line + "\n")
 
-        main_text_area.config(state="disabled")
+        main_text_area.config(state="normal")
         result_label.config(text="Start Date updated Successfully")
 
 
@@ -1184,7 +1184,7 @@ notebook.add(rate_table_tab, text="Rate Table Generator", padding= 5)
 
 # Create "Customer Entitlements" tab
 customer_entitlements_tab = ttk.Frame(notebook)
-notebook.add(customer_entitlements_tab, text="Entitle New Customers", padding= 5)
+notebook.add(customer_entitlements_tab, text="Entitle Customers", padding= 5)
 
 # Create "Manage Existing Customers" tab
 existing_customer_tab = ttk.Frame(notebook)
