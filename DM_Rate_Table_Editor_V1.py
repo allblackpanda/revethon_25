@@ -221,9 +221,9 @@ def get_rate_tables(filtered=False):
             data = json.load(file)
             series_window = Toplevel(root)
             series_window.title("Existing Rate Tables")
-            window_width = 520  # Adjust as necessary
+            window_width = 600  # Adjust as necessary
             window_height = 550  # Adjust as necessary
-            series_window.geometry(f"{window_width}x{window_height}+{x+290}+{y+100}")
+            series_window.geometry(f"{window_width}x{window_height}+{x+250}+{y+100}")
             series_window.iconbitmap(ICON)
 
             series_label = tk.Label(series_window, text="Select a Rate Table Series and Version:", padx=0, pady=5)
@@ -296,22 +296,23 @@ def get_rate_tables(filtered=False):
 
 
             def copy_to_main():
-                """Copies the selected rate table series to the main text area."""
-                text_data = series_text_area.get("1.0", "end").strip()  # Remove leading whitespace from entire text
+                """Copies the selected rate table series to the main text area and makes it editable."""
+                text_data = series_text_area.get("1.0", "end").strip()  
 
-                # Remove lines starting with "Created Date" (ignoring leading whitespace)
+                # Clean up the text data
                 text_data = "\n".join(
                     line for line in text_data.splitlines() 
                     if not re.match(r"^\s*Created Date", line) and "------" not in line
                 )
 
+                # Enable and clear the main text area
                 main_text_area.config(state="normal")
                 main_text_area.delete("1.0", "end")
 
-                # Add bold tag for the main text area
+                # Configure bold tags
                 main_text_area.tag_configure("bold", font=("Arial", 10, "bold"))
 
-                # Insert formatted text with bold tags into the main text area
+                # Insert formatted text with bold tags
                 lines = text_data.split('\n')
                 for line in lines:
                     if line.startswith("Series Name:"):
@@ -320,7 +321,7 @@ def get_rate_tables(filtered=False):
                     
                     elif line.startswith("Series Version:"):
                         main_text_area.insert("end", "Series Version:\t\t", "bold")
-                        main_text_area.insert("end", line.split("Series Version:")[1].strip() + "\n\n")
+                        main_text_area.insert("end", line.split("Series Version:")[1].strip() + "\n")
                     
                     elif line.startswith("Start Date:"):
                         main_text_area.insert("end", "Start Date:\t\t", "bold")
@@ -328,7 +329,7 @@ def get_rate_tables(filtered=False):
                     
                     elif line.startswith("Created Date:"):
                         main_text_area.insert("end", "Created Date:\t\t", "bold")
-                        main_text_area.insert("end", line.split("Created Date:")[1].strip() + "\n\n")
+                        main_text_area.insert("end", line.split("Created Date:")[1].strip() + "\n")
                     
                     elif line.startswith("Item Name"):
                         main_text_area.insert("end", "Item Name\t\t\tVersion\t\tRate\n", "bold")
@@ -339,15 +340,16 @@ def get_rate_tables(filtered=False):
                     else:
                         main_text_area.insert("end", line + "\n")
 
-                main_text_area.config(state="disabled")
-                result_label.config(text="Rate table successfully copied")
+                # Keep the text area editable
+                main_text_area.config(state="normal")
+
+                result_label.config(text="Rate table successfully copied and is now editable")
                 date_button.config(state=tk.NORMAL)
                 post_site_button.config(state=tk.NORMAL)
                 increment_version_button.config(state=tk.NORMAL)
                 clear_editor_button.config(state=tk.NORMAL)
 
                 series_window.destroy()
-
 
             def delete_rate_table():
                 """Deletes the selected rate table series and version."""
