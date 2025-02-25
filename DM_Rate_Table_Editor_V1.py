@@ -1169,7 +1169,7 @@ root = ttkb.Window(themename=config["theme"])
 root.title("Revenera Dynamic Monetization Standalone Tool")
 
 # Set window size and position
-window_width, window_height = 1100, 800
+window_width, window_height = config['main_window_width'], config['main_window_height']
 screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
@@ -1224,13 +1224,13 @@ post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", comman
 post_site_button.place(x=10, y=320)
 
 clear_editor_button = ttk.Button(rate_table_tab, text="Clear Editor", command=clear_editor, padding=(5, 7), width=button_width, state=tk.DISABLED)
-clear_editor_button.place(x=875, y=120)
+clear_editor_button.place(x=config['clear_edit_button_x'], y=120)
 
 
 
 # Text Area for Rate Table
-main_text_area = Text(rate_table_tab, wrap="word", height=20, width=70)
-main_text_area.pack(padx=230)
+main_text_area = Text(rate_table_tab, wrap="word", height=20, width=config['rate_table_editor_width'])
+main_text_area.pack(padx=config['rate_table_editor_padding'])
 
 # Result Label
 result_label = tk.Label(rate_table_tab, text="", font=("Arial", 10, "bold"))
