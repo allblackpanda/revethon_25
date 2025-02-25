@@ -1027,11 +1027,11 @@ def email_line_item():
 
     email_window = Toplevel(root)
     email_window.title("Send Email")
-    email_window.geometry("300x150")
+    email_window.geometry("450x150+700+450")
     email_window.iconbitmap(ICON)
 
     tk.Label(email_window, text="Email Address:").pack(pady=5)
-    email_entry = tk.Entry(email_window)
+    email_entry = tk.Entry(email_window, width=40)
     email_entry.pack(pady=5)
 
     def send():
