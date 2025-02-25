@@ -703,6 +703,12 @@ def create_and_map_customer():
         elastic_instance_id = register_customer()
         if elastic_instance_id != 0: #if it's 0 that means customer exists
             map_token_line_item(elastic_instance_id)
+        customer_id_entry.delete(0, tk.END)
+        customer_name_entry.delete(0, tk.END)
+        token_number_entry.delete(0, tk.END)
+        start_date_label.config(text=get_default_date())
+        end_date_label.config(text="Select End Date")
+        permanent_var.set(0) # Reset checkbox            
 
 def tab_selected_changed(event):
     """Update customer dropdown values when the 'Manage Existing Customers' tab is selected."""
