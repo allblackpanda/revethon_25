@@ -394,20 +394,43 @@ def increment_version():
         messagebox.showerror("Error", "No data available to increment version.")
         return
 
-    updated_text = ""
-    for line in text_data.split("\n"):
-        if line.lstrip().startswith("Series Version:"):
-            leading_spaces = len(line) - len(line.lstrip())
-            version_number = int(line.split("\t")[-1]) + 1 if line.split("\t")[-1].isdigit() else 1
-            updated_text += " " * leading_spaces + f"Series Version:\t\t{version_number}\n"
-        else:
-            updated_text += line + "\n"
-    
     main_text_area.config(state="normal")
     main_text_area.delete("1.0", "end")
-    main_text_area.insert("1.0", updated_text.strip())
-    main_text_area.config(state="normal")
+
+    # Add bold tag configuration
+    main_text_area.tag_configure("bold", font=("Arial", 10, "bold"))
+
+    # Split lines and handle bold text for specific fields
+    for line in text_data.split("\n"):
+        if line.startswith("Series Name:"):
+            main_text_area.insert("end", "Series Name:\t\t", "bold")
+            main_text_area.insert("end", line.split("Series Name:")[1].strip() + "\n")
+        
+        elif line.startswith("Series Version:"):
+            main_text_area.insert("end", "Series Version:\t\t", "bold")
+            version_number = int(line.split("\t")[-1]) + 1 if line.split("\t")[-1].isdigit() else 1
+            main_text_area.insert("end", f"{version_number}\n")
+        
+        elif line.startswith("Start Date:"):
+            main_text_area.insert("end", "Start Date:\t\t", "bold")
+            main_text_area.insert("end", line.split("Start Date:")[1].strip() + "\n")
+        
+        elif line.startswith("Created Date:"):
+            main_text_area.insert("end", "Created Date:\t\t", "bold")
+            main_text_area.insert("end", line.split("Created Date:")[1].strip() + "\n")
+        
+        elif line.startswith("Item Name"):
+            main_text_area.insert("end", "Item Name\t\t\tVersion\t\tRate\n", "bold")
+        
+        elif "------" in line:
+            main_text_area.insert("end", f"{'-'*65}\n")
+        
+        else:
+            main_text_area.insert("end", line + "\n")
+
+    main_text_area.config(state="disabled")
     result_label.config(text="Series Version incremented successfully")
+
 
 def rate_table_start_date():
     """Opens a date picker dialog to select a start date for the rate table."""
@@ -417,20 +440,43 @@ def rate_table_start_date():
         result_label.config(text=f"Selected Date: {selected_date}")
 
     text_data = main_text_area.get("1.0", "end").strip()
+
     if "Start Date:" in text_data:
-        updated_text = ""
-        for line in text_data.split("\n"):
-            if line.lstrip().startswith("Start Date:"):
-                leading_spaces = len(line) - len(line.lstrip())
-                updated_text += " " * leading_spaces + f"Start Date:\t\t{selected_date}\n"
-            else:
-                updated_text += line + "\n"
-        
         main_text_area.config(state="normal")
         main_text_area.delete("1.0", "end")
-        main_text_area.insert("1.0", updated_text)
+
+        # Add bold tag configuration
+        main_text_area.tag_configure("bold", font=("Arial", 10, "bold"))
+
+        for line in text_data.split("\n"):
+            if line.startswith("Series Name:"):
+                main_text_area.insert("end", "Series Name:\t\t", "bold")
+                main_text_area.insert("end", line.split("Series Name:")[1].strip() + "\n")
+            
+            elif line.startswith("Series Version:"):
+                main_text_area.insert("end", "Series Version:\t\t", "bold")
+                main_text_area.insert("end", line.split("Series Version:")[1].strip() + "\n")
+            
+            elif line.startswith("Start Date:"):
+                main_text_area.insert("end", "Start Date:\t\t", "bold")
+                main_text_area.insert("end", f"{selected_date}\n")
+            
+            elif line.startswith("Created Date:"):
+                main_text_area.insert("end", "Created Date:\t\t", "bold")
+                main_text_area.insert("end", line.split("Created Date:")[1].strip() + "\n")
+            
+            elif line.startswith("Item Name"):
+                main_text_area.insert("end", "Item Name\t\t\tVersion\t\tRate\n", "bold")
+            
+            elif "------" in line:
+                main_text_area.insert("end", f"{'-'*65}\n")
+            
+            else:
+                main_text_area.insert("end", line + "\n")
+
+        main_text_area.config(state="disabled")
         result_label.config(text="Start Date updated Successfully")
-        main_text_area.config(state="normal")
+
 
 def post_to_site():
     """Posts the current contents of the Main UI to the configured site and writes it to a file."""
@@ -1401,8 +1447,8 @@ def copy_to_clipboard():
     root.update()  # Now it stays on the clipboard after the window is closed
     messagebox.showinfo("Copied", "Elastic Instance ID copied to clipboard")
 
-copy_button = ttk.Button(button_frame, text="Copy", command=copy_to_clipboard)
-copy_button.pack(side="left", padx=10)
+copy_button = ttk.Button(button_frame, text="Copy", command=copy_to_clipboard, width=15)
+copy_button.pack(side="right", padx=10)
 
 
 # Fetch and display logo
