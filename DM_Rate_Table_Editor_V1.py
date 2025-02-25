@@ -223,7 +223,7 @@ def get_rate_tables(filtered=False):
             series_window.title("Existing Rate Tables")
             window_width = 520  # Adjust as necessary
             window_height = 550  # Adjust as necessary
-            series_window.geometry(f"{window_width}x{window_height}+{x+250}+{y+100}")
+            series_window.geometry(f"{window_width}x{window_height}+{x+290}+{y+100}")
             series_window.iconbitmap(ICON)
 
             series_label = tk.Label(series_window, text="Select a Rate Table Series and Version:", padx=0, pady=5)
@@ -1174,13 +1174,13 @@ post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", comman
 post_site_button.place(x=10, y=320)
 
 clear_editor_button = ttk.Button(rate_table_tab, text="Clear Editor", command=clear_editor, padding=(5, 7), width=button_width, state=tk.DISABLED)
-clear_editor_button.place(x=810, y=120)
+clear_editor_button.place(x=875, y=120)
 
 
 
 # Text Area for Rate Table
-main_text_area = Text(rate_table_tab, wrap="word", height=20, width=50)
-main_text_area.pack(padx=280)
+main_text_area = Text(rate_table_tab, wrap="word", height=20, width=70)
+main_text_area.pack(padx=230)
 
 # Result Label
 result_label = tk.Label(rate_table_tab, text="", font=("Arial", 10, "bold"))
