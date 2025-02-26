@@ -1169,7 +1169,8 @@ def email_line_item():
         send_email(to_address, subject, body)
         email_window.destroy()
 
-    tk.Button(email_window, text="Send Email", command=send, width=15).pack(pady=10)
+    tk.Button(email_window, text="Send Email", command=send, width=12).pack(side="left", padx=10, pady=10)
+    tk.Button(email_window, text="Close", command=email_window.destroy, width=8).pack(side="right", padx=10, pady=10)
 
 ############################################################################################################
 # Main Window Development
