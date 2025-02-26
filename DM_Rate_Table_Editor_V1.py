@@ -1461,7 +1461,7 @@ reporting_button.pack(side="left", padx=10)
 
 # Add customer ID label to the right of the Delete Line Item button
 customer_id_label = ttk.Label(button_frame, text="Instance ID: ", font=("Arial", 10, "normal"))
-customer_id_label.pack(side="left", padx=30)
+customer_id_label.pack(side="left", padx=20)
 
 # Add copy button to the right of the Elastic Instance ID display
 def copy_to_clipboard():
@@ -1470,7 +1470,7 @@ def copy_to_clipboard():
     root.update()  # Now it stays on the clipboard after the window is closed
     messagebox.showinfo("Copied", "Elastic Instance ID copied to clipboard")
 
-copy_button = ttk.Button(button_frame, text="Copy", command=copy_to_clipboard, width=11)
+copy_button = ttk.Button(button_frame, text="Copy", command=copy_to_clipboard, width=7)
 copy_button.pack(side="right", padx=10)
 
 
