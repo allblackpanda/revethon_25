@@ -1470,7 +1470,7 @@ def copy_to_clipboard():
     root.update()  # Now it stays on the clipboard after the window is closed
     messagebox.showinfo("Copied", "Elastic Instance ID copied to clipboard")
 
-copy_button = ttk.Button(button_frame, text="Copy", command=copy_to_clipboard, width=10)
+copy_button = ttk.Button(button_frame, text="Copy", command=copy_to_clipboard, width=11)
 copy_button.pack(side="right", padx=10)
 
 
