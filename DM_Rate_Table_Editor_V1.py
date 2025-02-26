@@ -1179,7 +1179,7 @@ config = read_config()
 
 # Create the main application window
 root = ttkb.Window(themename=config["theme"])
-root.title("Revenera Dynamic Monetization Standalone Tool")
+root.title("FlexNet EAST (Elastic Access Standalone Tool)")
 
 # Set window size and position
 window_width, window_height = config['main_window_width'], config['main_window_height']
