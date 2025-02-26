@@ -701,7 +701,7 @@ def create_and_map_customer():
         return
     else:
         elastic_instance_id = register_customer()
-        if elastic_instance_id != 0: #if it's 0 that means customer exists
+        if (elastic_instance_id != 0): #if it's 0 that means customer exists
             map_token_line_item(elastic_instance_id)
         customer_id_entry.delete(0, tk.END)
         customer_name_entry.delete(0, tk.END)
@@ -1296,6 +1296,11 @@ exit_button3.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-righ
 # New Customer Registation Tab
 ############################################################################################################
 
+def on_customer_id_change(*args):
+    """Automatically copy the entered Customer ID to the Customer Name field."""
+    customer_name_entry.delete(0, tk.END)
+    customer_name_entry.insert(0, customer_id_entry.get())
+
 # Tenant label (Upper Left at x=30, y=10)
 ttk.Label(customer_entitlements_tab, text=f"Tenant: {config['site']}", font=("Arial", 10, "bold")).place(x=30, y=8)
 
@@ -1314,6 +1319,7 @@ customer_frame.place(x=30, y=150)  # Position below the environment selection
 ttk.Label(customer_frame, text="Customer ID:", font=("Arial", 10, "normal")).pack(side="left", padx=5)
 customer_id_entry = ttk.Entry(customer_frame, width=25)
 customer_id_entry.pack(side="left", padx=5)
+customer_id_entry.bind("<KeyRelease>", on_customer_id_change)
 
 # Customer Name Label and Entry (Right of Customer ID)
 ttk.Label(customer_frame, text="Customer Name:", font=("Arial", 10, "normal")).pack(side="left", padx=20)
