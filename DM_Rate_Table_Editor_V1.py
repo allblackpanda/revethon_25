@@ -1195,15 +1195,15 @@ notebook.pack(expand=True, fill="both")
 
 # Create "Rate Table Generator" tab
 rate_table_tab = ttk.Frame(notebook)
-notebook.add(rate_table_tab, text="Rate Table Generator", padding= 5)
+notebook.add(rate_table_tab, text="Rate Table Editor", padding= 5)
 
 # Create "Customer Entitlements" tab
 customer_entitlements_tab = ttk.Frame(notebook)
-notebook.add(customer_entitlements_tab, text="Entitle Customers", padding= 5)
+notebook.add(customer_entitlements_tab, text="Entitle New & Existing Customers", padding= 5)
 
 # Create "Manage Existing Customers" tab
 existing_customer_tab = ttk.Frame(notebook)
-notebook.add(existing_customer_tab, text="Manage Existing Customers", padding=5)
+notebook.add(existing_customer_tab, text="Manage Customer Entitlements", padding=5)
 
 # UI Components for "Rate Table Generator" tab
 env_var = tk.StringVar(value=UAT_OPTION)
