@@ -77,6 +77,7 @@ If you do not want to use the email function these are the required parameters i
     "site": "your_site",
     "geo": "region",
     "jwt": "path_to_jwt_file",
+    "basic_Auth": "base64_encoded_username_password",
     "port": 5000,
     "theme": "default",
     "logo_url": "your_logo_url",
