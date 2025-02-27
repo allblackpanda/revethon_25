@@ -1066,11 +1066,13 @@ def on_table_select(event):
     if selected:
         edit_button.config(state=tk.NORMAL)
         delete_button.config(state=tk.NORMAL)
-        email_button.config(state=tk.NORMAL)
+        if config.get("email_enabled", True): 
+            email_button.config(state=tk.NORMAL)
     else:
         edit_button.config(state=tk.DISABLED)
         delete_button.config(state=tk.DISABLED)
-        email_button.config(state=tk.DISABLED)
+        if config.get("email_enabled", True): 
+            email_button.config(state=tk.DISABLED)
 
 # Function to toggle the date fields based on checkbox state
 def toggle_permanent():
@@ -1178,11 +1180,11 @@ def email_line_item():
 config = read_config()
 
 # Create the main application window
-root = ttkb.Window(themename=config["theme"])
+root = ttkb.Window(themename=config.get("theme", "cosmo"))
 root.title("FlexNet EAST (Elastic Access Standalone Tool)")
 
 # Set window size and position
-window_width, window_height = config['main_window_width'], config['main_window_height']
+window_width, window_height = config.get('main_window_width',1100), config.get('main_window_height',800)
 screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight()
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
@@ -1237,13 +1239,13 @@ post_site_button = ttk.Button(rate_table_tab, text="Post New Rate Table", comman
 post_site_button.place(x=10, y=320)
 
 clear_editor_button = ttk.Button(rate_table_tab, text="Clear Editor", command=clear_editor, padding=(5, 7), width=button_width, state=tk.DISABLED)
-clear_editor_button.place(x=config['clear_edit_button_x'], y=120)
+clear_editor_button.place(x=config.get('clear_edit_button_x',875), y=120)
 
 
 
 # Text Area for Rate Table
-main_text_area = Text(rate_table_tab, wrap="word", height=20, width=config['rate_table_editor_width'])
-main_text_area.pack(padx=config['rate_table_editor_padding'])
+main_text_area = Text(rate_table_tab, wrap="word", height=20, width=config.get('rate_table_editor_width', 70))
+main_text_area.pack(padx=config.get('rate_table_editor_padding',230))
 
 # Result Label
 result_label = tk.Label(rate_table_tab, text="", font=("Arial", 10, "bold"))
@@ -1436,9 +1438,10 @@ edit_customer_id = tk.StringVar(button_frame)
 edit_button = ttk.Button(button_frame, text="Edit Line Item", command=edit_line_item, state=tk.DISABLED)
 edit_button.pack(side="left", padx=10)
 
-# Add email button 
-email_button = ttk.Button(button_frame, text="Email Line Item", command=email_line_item, state=tk.DISABLED)
-email_button.pack(side="left", padx=10)
+# Add email button
+if config.get("email_enabled", True): 
+    email_button = ttk.Button(button_frame, text="Email Line Item", command=email_line_item, state=tk.DISABLED)
+    email_button.pack(side="left", padx=10)
 
 # Add Delete button 
 delete_button = Button(
