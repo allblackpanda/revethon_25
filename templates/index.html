@@ -525,9 +525,12 @@
             }
             
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Correlation ID,Usage Time,Write Time,Account ID,Account Name,Consumer ID,Consumer Type,Meter,Meter Type,Meter Cost,Meter Quantity,Item,Item Version,Item Quantity,Activation ID,Instance ID,Mapped Entitled Count,Tokens Used,Session ID,Session State,Request Response Code,Overdraft Count\n";
+            csvContent += "Correlation ID,Usage Time,Write Time,Account ID,Consumer ID,Consumer Type,Meter,Meter Type,Meter Cost,Meter Quantity,Item,Item Version,Item Quantity,Activation ID,Instance ID,Mapped Entitled Count,Tokens Used,Session ID,Session State,Request Response Code,Overdraft Count\n";
             filteredData.forEach(item => {
-                csvContent += `${item.correlationId},${item.usageTime},${item.writeTime},${item.accountId},${item.accountName},${item.consumerId},${item.consumerType},${item.meter},${item.meterType},${item.meterCost},${item.meterQuantity},${item.item},${item.itemVersion},${item.itemQuantity},${item.activationId},${item.instanceId},${item.mappedEntitledCount},${item.used}${item.sessionId},${item.sessionState},${item.requestResponse},${item.overdraftCount}\n`;
+                // Replace empty values with "N/A"
+                const safeValue = (val) => (val === undefined || val === null || val === '') ? 'N/A' : val;
+                
+                csvContent += `${safeValue(item.correlationId)},${safeValue(item.usageTime)},${safeValue(item.writeTime)},${safeValue(item.accountId)},${safeValue(item.consumerId)},${safeValue(item.consumerType)},${safeValue(item.meter)},${safeValue(item.meterType)},${safeValue(item.meterCost)},${safeValue(item.meterQuantity)},${safeValue(item.item)},${safeValue(item.itemVersion)},${safeValue(item.itemQuantity)},${safeValue(item.activationId)},${safeValue(item.instanceId)},${safeValue(item.mappedEntitledCount)},${safeValue(item.used)},${safeValue(item.sessionId)},${safeValue(item.sessionState)},${safeValue(item.requestResponse)},${safeValue(item.overdraftCount)}\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
