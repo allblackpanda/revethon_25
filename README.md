@@ -1,8 +1,8 @@
-# DM Rate Table Editor V1
+# Elastic Access Standalone Tool
 
 ## Overview
 
-DM Rate Table Editor V1 is a GUI-based application designed to manage rate tables for dynamic monetization. The tool allows users to create, edit, delete, and post rate tables through an intuitive interface. It integrates with external APIs and provides additional functionalities such as customer entitlement management and reporting.
+Elastic Access Standalone Tool is a GUI-based application designed to manage rate tables for dynamic monetization. The tool allows users to create, edit, delete, and post rate tables through an intuitive interface. It integrates with external APIs and provides additional functionalities such as customer entitlement management and reporting.
 
 ## Features
 
@@ -32,7 +32,7 @@ DM Rate Table Editor V1 is a GUI-based application designed to manage rate table
 3. Place the `config.json` file in the root directory.
 4. Run the application with a specific configuration:
    ```sh
-   python DM_Rate_Table_Editor_V1.py -config your_config
+   python Elastic_Access_Standalone_Tool.py -config your_config
    ```
 
 ## Configuration
@@ -93,7 +93,7 @@ The parameter `email_enabled` is required to disable email notifications.
 Start the application using:
 
 ```sh
-python DM_Rate_Table_Editor_V1.py -config your_config
+python Elastic_Access_Standalone_Tool.py -config your_config
 ```
 
 ### Managing Rate Tables
