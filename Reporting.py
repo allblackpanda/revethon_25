@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import requests, argparse
 import json
-import plotly.express as px
 from datetime import datetime
 
 PORT = 5000
