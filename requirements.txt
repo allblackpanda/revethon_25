@@ -2,7 +2,6 @@ Flask
 pandas
 requests
 plotly
-tkinter
 Pillow
 tkcalendar
 ttkbootstrap
