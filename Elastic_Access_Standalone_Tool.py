@@ -22,7 +22,12 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import socket
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 
+ 
 UAT_OPTION = "-uat"
 REPORTING_APP_URL = "127.0.0.1"
 PORT = 5000
@@ -1091,35 +1096,98 @@ def get_default_date():
     day = today.strftime("%d")
     return f"{year}-{month}-{day}"
 
-def send_email(to_address, subject, body):
-    """Send an email with the specified subject and body to the given address."""
+def send_email(to_address, subject, original_item, customer_id):
+    """Send an email with a structured table for values and an embedded inline logo image."""
     config = read_config()
+    
     try:
         from_address = config['from_email']
         password = config['email_pwd']
-        smtp_server = config['smtp_server']  # Ensure this is the correct SMTP server address
+        smtp_server = config['smtp_server']
+        logo_url = config['logo_url']
     except KeyError as e:
         messagebox.showerror("Configuration Error", f"Missing configuration key: {str(e)}")
         return
 
-    smtp_port = 587  # Ensure this is the correct SMTP port
+    smtp_port = 587  
 
     msg = MIMEMultipart()
     msg['From'] = from_address
     msg['To'] = to_address
     msg['Subject'] = subject
 
-    msg.attach(MIMEText(body, 'plain'))
+    # Fetch and resize the logo image
+    try:
+        response = requests.get(logo_url)
+        response.raise_for_status()
+        
+        img = Image.open(BytesIO(response.content))
+        new_size = (int(img.width * 0.25), int(img.height * 0.25))  
+        img = img.resize(new_size, Image.Resampling.LANCZOS)
+
+        logo_data = BytesIO()
+        img.save(logo_data, format="PNG")
+        logo_data.seek(0)
+
+        image = MIMEImage(logo_data.read(), name="logo.png")
+        image.add_header('Content-ID', '<logo>')  
+        msg.attach(image)
+    except requests.RequestException as e:
+        logging.error(f"Error fetching logo image: {str(e)}")
+        messagebox.showwarning("Logo Error", "Failed to fetch logo image. The email will be sent without the logo.")
+
+    # HTML body with structured table
+    html_body = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif;">
+            <div style="text-align: left; padding-bottom: 20px;">
+                <img src="cid:logo" alt="Company Logo" style="max-width: 150px;"/>
+            </div>
+            
+            <p>Here are the details of your Token Order:</p>
+
+            <table style="width: 40%; border-collapse: collapse; text-align: left; border: 1px solid #ddd;">
+                <tr style="background-color: #f2f2f2;">
+                    <th style="padding: 10px; border: 1px solid #ddd;">Item</th>
+                    <th style="padding: 10px; border: 1px solid #ddd;">Value</th>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><b>Elastic Instance ID</b></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{customer_id}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><b>Token Quantity</b></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{original_item.get('quantity', 'N/A')}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><b>Quantity Used</b></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{float(original_item.get('used', 0)):.2f}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><b>Start Date</b></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{convert_epoch_to_date(original_item.get('start', 0)).split()[0]}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><b>End Date</b></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{'Permanent' if original_item.get('end', 0) == PERMANENT_EPOCH else convert_epoch_to_date(original_item.get('end', 0)).split()[0]}</td>
+                </tr>
+            </table>
+
+            <p style="margin-top: 20px;">Please contact us with any questions.</p>
+            <p>Best regards,</p>
+            <p>Revethon Sales</p>
+        </body>
+    </html>
+    """
+
+    msg.attach(MIMEText(html_body, 'html'))
 
     try:
-        # Verify SMTP server address
-        socket.gethostbyname(smtp_server)
-        
+        socket.gethostbyname(smtp_server)  
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(from_address, password)
-        text = msg.as_string()
-        server.sendmail(from_address, to_address, text)
+        server.sendmail(from_address, to_address, msg.as_string())
         server.quit()
         messagebox.showinfo("Success", "Email sent successfully")
     except smtplib.SMTPAuthenticationError:
@@ -1132,6 +1200,8 @@ def send_email(to_address, subject, body):
         messagebox.showerror("Address Error", f"Address-related error connecting to server: {str(e)}. Please check the SMTP server address.")
     except Exception as e:
         messagebox.showerror("Error", f"An unexpected error occurred: {str(e)}")
+
+
 
 def email_line_item():
     """Prompt the user to enter an email address and send the selected line item."""
@@ -1160,15 +1230,21 @@ def email_line_item():
             return
 
         subject = "Token Order Details"
+        
+        # Ensure 'customer_id' is passed correctly
+        customer_id = edit_customer_id.get()
+
         body = (
-            f"Elastic Instance ID:\t{edit_customer_id.get()}\n\n"
+            f"Here are the details of your Token order:\n\n"
+            f"Elastic Instance ID:\t{customer_id}\n\n"
             f"Token Quantity:\t\t{original_item.get('quantity', 'N/A')}\n"
             f"Quantity Used:\t\t{float(original_item.get('used', 0)):.2f}\n\n"
             f"Start Date:\t\t{convert_epoch_to_date(original_item.get('start', 0)).split()[0]}\n"
             f"End Date:\t\t{'Permanent' if original_item.get('end', 0) == PERMANENT_EPOCH else convert_epoch_to_date(original_item.get('end', 0)).split()[0]}\n"
         )
 
-        send_email(to_address, subject, body)
+        # Now passing customer_id as the fourth parameter
+        send_email(to_address, subject, original_item, customer_id)
         email_window.destroy()
 
     tk.Button(email_window, text="Send Email", command=send, width=12).pack(side="left", padx=10, pady=10)
