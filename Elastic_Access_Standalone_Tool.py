@@ -564,7 +564,7 @@ def open_user_guide():
 
 def open_api_ref():
     """Opens the Rate Table API Reference in the default web browser."""
-    webbrowser.open("https://fnoapi-dynamicmonetization.redoc.ly/#operation/getRateTables")
+    webbrowser.open("https://fnoapi-dynamicmonetization.redoc.ly")
 
 def register_customer():
     """Registers a new customer using DAPI."""
@@ -1380,11 +1380,11 @@ dmug_button = Button(
 dmug_button.pack(side="left", padx=10, pady=10)
 apiref_button = Button(
             bottom_frame_rate_table_tab, 
-            text="Rate Table API Reference", 
+            text="Dynamic Monetization API Reference", 
             command=open_api_ref,
             bootstyle="success",
             padding=(5,7),
-            width=30
+            width=33
             )
 apiref_button.pack(side="left", padx=10, pady=10)
 
