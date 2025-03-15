@@ -1323,6 +1323,39 @@ clear_editor_button.place(x=config.get('clear_edit_button_x',875), y=120)
 main_text_area = Text(rate_table_tab, wrap="word", height=20, width=config.get('rate_table_editor_width', 70))
 main_text_area.pack(padx=config.get('rate_table_editor_padding',230))
 
+# Function to load welcome text into the Rate Table Editor
+def load_welcome_message():
+    """Loads the welcome message into the Rate Table Editor on startup."""
+    main_text_area.config(state="normal")  # Enable editing
+    main_text_area.delete("1.0", "end")  # Clear any existing content
+
+    # Configure a stylish and centered font for the welcome message
+    main_text_area.tag_configure("welcome_title", font=("Georgia", 18, "bold"), foreground="green", justify="center")
+    main_text_area.tag_configure("welcome_text", font=("Verdana", 11, "normal"), foreground="black", justify="left")
+    main_text_area.tag_configure("divider", font=("Verdana", 12, "bold"), foreground="gray", justify="center")
+
+    # Centering trick: Add enough spaces to align text properly
+    padding = " " * 0  # Adjust based on text area width for proper centering
+
+    # Insert the welcome message with proper formatting
+    main_text_area.insert("1.0", padding + "\n------------------------------------------------------", "divider")
+    main_text_area.insert("end", padding + "\nWelcome to the Elastic Access\n", "welcome_title")
+    main_text_area.insert("end", padding + "Standalone Tool!\n\n", "welcome_title")
+    main_text_area.insert("end", padding + " This application allows you to:\n\n", "welcome_text")
+    main_text_area.insert("end",
+        padding + " 1) Create, Manage and Post Token Rate Tables\n"
+        + padding + " 2) Create Token Entitlements for New & Existing Customers\n"
+        + padding + " 3) Manage Existing Customer Entitlements\n"
+        + padding + " 4) Report on Customer Token Usage\n\n",
+        "welcome_text"
+    )
+    main_text_area.insert("end", padding + "------------------------------------------------------\n", "divider")
+
+    main_text_area.config(state="disabled")  # Prevent editing until user starts typing
+
+# Call the function AFTER main_text_area is initialized
+load_welcome_message()
+
 # Result Label
 result_label = tk.Label(rate_table_tab, text="", font=("Arial", 10, "bold"))
 result_label.pack(pady=10)
