@@ -12,16 +12,13 @@ import webbrowser
 import argparse
 import logging
 import traceback
+import socket
 import re
 import uuid
 from io import BytesIO
 import ttkbootstrap as ttkb
 from ttkbootstrap.dialogs import DatePickerDialog
 from ttkbootstrap import Button
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import socket
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -827,7 +824,8 @@ def get_customer_line_items():
     
     customer_id = selected_customer["id"]
     edit_customer_id.set(customer_id)  # Set the customer ID for editing
-    
+
+
     url = build_base_url() + f"/instances/{customer_id}/line-items"
     headers = build_api_headers()
 
@@ -1099,12 +1097,13 @@ def get_default_date():
 def send_email(to_address, subject, original_item, customer_id):
     """Send an email with a structured table for values and an embedded inline logo image."""
     config = read_config()
-    
+    selected_account_id = selected_account_var.get()
     try:
         from_address = config['from_email']
         password = config['email_pwd']
         smtp_server = config['smtp_server']
         logo_url = config['logo_url']
+        bcc_address = config.get('bcc_email', '')  # Get BCC address from config
     except KeyError as e:
         messagebox.showerror("Configuration Error", f"Missing configuration key: {str(e)}")
         return
@@ -1115,6 +1114,8 @@ def send_email(to_address, subject, original_item, customer_id):
     msg['From'] = from_address
     msg['To'] = to_address
     msg['Subject'] = subject
+    if bcc_address:
+        msg['Bcc'] = bcc_address  # Add BCC address if available
 
     # Fetch and resize the logo image
     try:
@@ -1152,6 +1153,10 @@ def send_email(to_address, subject, original_item, customer_id):
                     <th style="padding: 10px; border: 1px solid #ddd;">Value</th>
                 </tr>
                 <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;"><b>Account ID</b></td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{selected_account_id}</td>
+                </tr>
+                <tr>
                     <td style="padding: 10px; border: 1px solid #ddd;"><b>Elastic Instance ID</b></td>
                     <td style="padding: 10px; border: 1px solid #ddd;">{customer_id}</td>
                 </tr>
@@ -1187,7 +1192,7 @@ def send_email(to_address, subject, original_item, customer_id):
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(from_address, password)
-        server.sendmail(from_address, to_address, msg.as_string())
+        server.sendmail(from_address, [to_address] + [bcc_address], msg.as_string())
         server.quit()
         messagebox.showinfo("Success", "Email sent successfully")
     except smtplib.SMTPAuthenticationError:
