@@ -1288,6 +1288,82 @@ notebook.add(customer_entitlements_tab, text="Entitle New & Existing Customers",
 existing_customer_tab = ttk.Frame(notebook)
 notebook.add(existing_customer_tab, text="Manage Customer Entitlements", padding=5)
 
+# Create "Resources" tab
+resources_tab = ttk.Frame(notebook)
+notebook.add(resources_tab, text="Additional Resources", padding=5)
+
+# Add content to the "Resources" tab
+
+resources_label = ttk.Label(resources_tab, text="Additional Resources", font=("Arial", 14, "bold"))
+resources_label.pack(pady=10, padx=10, anchor="nw")  # Anchor to the top-left
+
+# Create a frame for better layout
+video_frame = tk.Frame(resources_tab)
+video_frame.pack(side="top", anchor="w", padx=10, pady=10)  # Move to the top-left
+
+# Load and display the first image
+image_path = r"./static/PB_SS_2024_DM.png"
+image = Image.open(image_path)
+image = image.resize((350, 187), Image.Resampling.LANCZOS)
+photo = ImageTk.PhotoImage(image)
+
+# Create sub-frames for left (image) and right (caption)
+image_caption_frame = tk.Frame(video_frame)
+image_caption_frame.pack(side="top", fill="x", padx=10, pady=10)
+
+image_label = tk.Label(image_caption_frame, image=photo, cursor="hand2")
+image_label.image = photo  # Keep a reference to avoid garbage collection
+image_label.pack(side="left", padx=10)
+image_label.bind("<Button-1>", lambda e: webbrowser.open("https://www.yout-ube.com/watch?v=1CqaeNpcF_A&t=7s"))  # Open the video link
+
+# Add the caption to the right of the image
+caption = """Revenera's Paul Bland (Senior Director, Product Management) covers the drivers and use cases for Elastic Access to your product portfolio. Ansys' Steve Del (Director, Software Research and Development) joins Paul to share his experience and thoughts on Elastic Access at Revenera's SoftSummit 2024 EMEA event."""
+caption_label = ttk.Label(image_caption_frame, text=caption, font=("Verdana", 11, "normal"), wraplength=625, justify="left")
+caption_label.pack(side="left", padx=10)
+
+# Load and display the second image
+second_image_path = r"./static/DM_demo.png"
+second_image = Image.open(second_image_path)
+second_image = second_image.resize((350, 187), Image.Resampling.LANCZOS)
+second_photo = ImageTk.PhotoImage(second_image)
+
+# Create sub-frames for left (image) and right (caption)
+second_image_caption_frame = tk.Frame(video_frame)
+second_image_caption_frame.pack(side="top", fill="x", padx=10, pady=10)
+
+second_image_label = tk.Label(second_image_caption_frame, image=second_photo, cursor="hand2")
+second_image_label.image = second_photo  # Keep a reference to avoid garbage collection
+second_image_label.pack(side="left", padx=10)
+second_image_label.bind("<Button-1>", lambda e: webbrowser.open("https://www.yout-ube.com/watch?v=IulvRoqC9sA"))
+
+# Add the caption to the right of the image
+second_caption = """A demonstration of an application using Revenera's Elastic Access Token-based licensing"""
+second_caption_label = ttk.Label(second_image_caption_frame, text=second_caption, font=("Verdana", 11, "normal"), wraplength=625, justify="left")
+second_caption_label.pack(side="left", padx=10)
+
+# Add the caption to the right of the image
+second_caption_label.pack(side="left", padx=10)
+
+# Load and display the third image
+third_image_path = r"./static/SFDC_DM.png"
+third_image = Image.open(third_image_path)
+third_image = third_image.resize((350, 187), Image.Resampling.LANCZOS)
+third_photo = ImageTk.PhotoImage(third_image)
+
+# Create sub-frames for left (image) and right (caption)
+third_image_caption_frame = tk.Frame(video_frame)
+third_image_caption_frame.pack(side="top", fill="x", padx=10, pady=10)
+
+third_image_label = tk.Label(third_image_caption_frame, image=third_photo, cursor="hand2")
+third_image_label.image = third_photo  # Keep a reference to avoid garbage collection
+third_image_label.pack(side="left", padx=10)
+third_image_label.bind("<Button-1>", lambda e: webbrowser.open("https://www.yout-ube.com/watch?v=qEAvf2agY-A"))
+
+# Add the caption to the right of the image
+third_caption = """A demonstration of how Revenera's Token Based Licensing Service can be directly integrated with Salesforce.com"""
+third_caption_label = ttk.Label(third_image_caption_frame, text=third_caption, font=("Verdana", 11, "normal"), wraplength=625, justify="left")
+third_caption_label.pack(side="left", padx=10)
+
 # UI Components for "Rate Table Generator" tab
 env_var = tk.StringVar(value=UAT_OPTION)
 
@@ -1372,6 +1448,8 @@ bottom_frame_customer_entitlements_tab = ttk.Frame(customer_entitlements_tab)
 bottom_frame_customer_entitlements_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
 bottom_frame_existing_customer_tab = ttk.Frame(existing_customer_tab)
 bottom_frame_existing_customer_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
+bottom_frame_resources_tab = ttk.Frame(resources_tab)
+bottom_frame_resources_tab.pack(side="bottom", fill="x", pady=0)  # Anchors to bottom with padding
 
 # User Guide and API Reference Buttons
 dmug_button = Button(
@@ -1393,12 +1471,6 @@ apiref_button = Button(
             )
 apiref_button.pack(side="left", padx=10, pady=10)
 
-
-#ttk.Button(bottom_frame_rate_table_tab, text="Dynamic Monetization User Guide", command=open_user_guide, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
-#ttk.Button(bottom_frame_rate_table_tab, text="Rate Table API Reference", command=open_api_ref, padding=(5, 7), width=30).pack(side="left", padx=10, pady=5)
-# Create a new button in bottom_frame_existing_customer_tab
-
-
 # Place the "Exit" button on the bottom right
 exit_button1 = ttk.Button(bottom_frame_rate_table_tab, text="Exit", command=root.quit, padding=(20, 5))
 exit_button1.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
@@ -1406,7 +1478,8 @@ exit_button2 = ttk.Button(bottom_frame_customer_entitlements_tab, text="Exit", c
 exit_button2.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
 exit_button3 = ttk.Button(bottom_frame_existing_customer_tab, text="Exit", command=root.quit, padding=(20, 5))
 exit_button3.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
-
+exit_button4 = ttk.Button(bottom_frame_resources_tab, text="Exit", command=root.quit, padding=(20, 5))
+exit_button4.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
 
 ############################################################################################################
 # New Customer Registation Tab
