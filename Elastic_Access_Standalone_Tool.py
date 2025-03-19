@@ -1671,13 +1671,13 @@ delete_button = Button(
 delete_button.pack(side="left", padx=10)
 
 # Add Reporting button 
-reporting_button = Button(
-            button_frame, 
-            text="Reporting", 
-            command=start_reporting,
-            bootstyle="info"
-            )
-reporting_button.pack(side="left", padx=10)
+# reporting_button = Button(
+#             button_frame, 
+#             text="Reporting", 
+#             command=start_reporting,
+#             bootstyle="info"
+#             )
+# reporting_button.pack(side="left", padx=10)
 
 # Add customer ID label to the right of the Delete Line Item button
 customer_id_label = ttk.Label(button_frame, text="Instance ID: ", font=("Arial", 10, "normal"))
