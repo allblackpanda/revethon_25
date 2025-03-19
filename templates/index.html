@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reporting Dashboard</title>
-    <link rel="icon" href="{{ url_for('static', filename='Revethon2025.ico') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='Reporter.ico') }}" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"> -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -137,16 +137,27 @@
             <li><a class="dropdown-item" href="#" onclick="takeScreenshot('pdf')">Save as PDF</a></li>
           </ul>
         </div>
-      </div>
-    
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+    </div>
+    <!-- Revethon Logo (Farthest Bottom Right) -->
+    <img src="{{ url_for('static', filename='revethon_logo.png') }}" 
+        alt="Revethon Logo" 
+        class="revethon-logo">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     
     <style>
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+        }
+        .revethon-logo {
+            position: fixed;
+            bottom: 10px;  /* Adjust as needed */
+            right: 10px;   /* Pushes it to the farthest right */
+            height: 50px;  /* Adjust the size */
+            max-width: 300px; /* Prevents it from getting too large */
         }
 
         .loading-overlay {
