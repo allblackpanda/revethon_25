@@ -10,6 +10,7 @@ import subprocess
 import threading
 import webbrowser
 import argparse
+import atexit
 import logging
 import traceback
 import socket
@@ -53,6 +54,7 @@ parser.add_argument('-config', "--config", help="Specify the configuration to ov
 # Get what was passed if anything
 args = parser.parse_args()
 config_parameter = args.config
+reporter_process = None
 
 # Add logging
 # Configure logging
@@ -74,8 +76,6 @@ def log_function_call(func):
             raise e
     return wrapper
 
-
-
 def read_config():
     """Reads configuration from a file and returns it as a dictionary."""
     try:
@@ -93,6 +93,15 @@ def read_config():
     except Exception as e:
         logging.error(f"Error reading config: {e}")
         return {}
+
+def initialize_reporter():
+    global reporter_process
+    try:
+        reporter_process = subprocess.Popen(["python", "Reporting.py", "-config", config_parameter], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        logging.info(f"Started Reporting Process on PID: {reporter_process.pid}")
+    except Exception as e:
+        logging.error(f"Error starting reporting: {e}")
+        messagebox.ERROR("Error","Error opening reporting, please check the log file")
 
 def build_base_url():
     base_url = f"https://{config['site']}"
@@ -127,13 +136,7 @@ def convert_epoch_to_date(epoch_ms):
         return "Invalid Date"
 
 def start_reporting():
-    """Starts the Reporting.py script in the background and opens the reporting dashboard in Chrome."""
-    try:
-        messagebox.showinfo("Starting Reporter", "Starting Reporter. This may take a couple of seconds.")
-        subprocess.Popen(["python", "Reporting.py", "-config", config_parameter], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception as e:
-        logging.error(f"Error starting reporting: {e}")
-        messagebox.ERROR("Error","Error opening reporting, please check the log file")
+    """Opens the reporting dashboard in Chrome."""
     port = config["port"] if "port" in config else PORT
     def open_browser():
         time.sleep(3)
@@ -150,7 +153,7 @@ def start_reporting():
             except webbrowser.Error as e:
                 logging.error(f"Error Opening Browser: {e}")
                 messagebox.showerror("Error", "Error opening chrome. Please check the log file")
-
+    messagebox.showinfo("Starting Reporting Dashboard", "Starting Reporting Dashboard. Please wait...")
     threading.Thread(target=open_browser, daemon=True).start()
 
 @log_function_call
@@ -741,6 +744,8 @@ def tab_selected_changed(event):
             get_customer_line_items()
         else:
             selected_account_var.set("")  # Clear selection if no customers exist
+    # elif notebook.select() == notebook.tabs()[3]: # Reporting tab
+    #     start_reporting()
 
 def on_env_change():
     """Reload customer names and refresh rate table dropdown when the environment selection changes."""
@@ -1255,11 +1260,24 @@ def email_line_item():
     tk.Button(email_window, text="Send Email", command=send, width=12).pack(side="left", padx=10, pady=10)
     tk.Button(email_window, text="Close", command=email_window.destroy, width=8).pack(side="right", padx=10, pady=10)
 
+def quit_application():
+    global reporter_process
+    """Cleanly exit the application."""
+    logging.info(f"Closing Reporter Process ID: {reporter_process.pid}")
+    if reporter_process.poll() is None:
+        reporter_process.terminate()
+        reporter_process.wait()  # Optional: wait for the process to terminate
+    if reporter_process.poll() is None:
+        reporter_process.kill()
+    logging.info(f"Closing Application")
+    root.quit() 
+
+atexit.register(quit_application)
 ############################################################################################################
 # Main Window Development
 ############################################################################################################
 config = read_config()
-
+initialize_reporter() # Start the reporter
 # Create the main application window
 root = ttkb.Window(themename=config.get("theme", "cosmo"))
 root.title("FlexNet EAST (Elastic Access Standalone Tool)")
@@ -1288,10 +1306,17 @@ notebook.add(customer_entitlements_tab, text="Entitle New & Existing Customers",
 existing_customer_tab = ttk.Frame(notebook)
 notebook.add(existing_customer_tab, text="Manage Customer Entitlements", padding=5)
 
+# Create "Reporting" tab
+reporting_tab = ttk.Frame(notebook)
+notebook.add(reporting_tab, text="Reporting", padding=5)
+
 # Create "Resources" tab
 resources_tab = ttk.Frame(notebook)
 notebook.add(resources_tab, text="Additional Resources", padding=5)
 
+############################################################################################################
+# Resources Tab
+############################################################################################################
 # Add content to the "Resources" tab
 
 resources_label = ttk.Label(resources_tab, text="Additional Resources", font=("Arial", 14, "bold"))
@@ -1448,6 +1473,8 @@ bottom_frame_customer_entitlements_tab = ttk.Frame(customer_entitlements_tab)
 bottom_frame_customer_entitlements_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
 bottom_frame_existing_customer_tab = ttk.Frame(existing_customer_tab)
 bottom_frame_existing_customer_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
+bottom_frame_reporter_tab = ttk.Frame(reporting_tab)
+bottom_frame_reporter_tab.pack(side="bottom", fill="x", pady=10)  # Anchors to bottom with padding
 bottom_frame_resources_tab = ttk.Frame(resources_tab)
 bottom_frame_resources_tab.pack(side="bottom", fill="x", pady=0)  # Anchors to bottom with padding
 
@@ -1472,14 +1499,17 @@ apiref_button = Button(
 apiref_button.pack(side="left", padx=10, pady=10)
 
 # Place the "Exit" button on the bottom right
-exit_button1 = ttk.Button(bottom_frame_rate_table_tab, text="Exit", command=root.quit, padding=(20, 5))
+exit_button1 = ttk.Button(bottom_frame_rate_table_tab, text="Exit", command=quit_application, padding=(20, 5))
 exit_button1.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
-exit_button2 = ttk.Button(bottom_frame_customer_entitlements_tab, text="Exit", command=root.quit, padding=(20, 5))
+exit_button2 = ttk.Button(bottom_frame_customer_entitlements_tab, text="Exit", command=quit_application, padding=(20, 5))
 exit_button2.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
-exit_button3 = ttk.Button(bottom_frame_existing_customer_tab, text="Exit", command=root.quit, padding=(20, 5))
+exit_button3 = ttk.Button(bottom_frame_existing_customer_tab, text="Exit", command=quit_application, padding=(20, 5))
 exit_button3.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
-exit_button4 = ttk.Button(bottom_frame_resources_tab, text="Exit", command=root.quit, padding=(20, 5))
+exit_button4 = ttk.Button(bottom_frame_reporter_tab, text="Exit", command=quit_application, padding=(20, 5))
 exit_button4.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
+exit_button4 = ttk.Button(bottom_frame_resources_tab, text="Exit", command=quit_application, padding=(20, 5))
+exit_button4.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
+
 
 ############################################################################################################
 # New Customer Registation Tab
@@ -1671,8 +1701,30 @@ if response.status_code == 200:
     logo_image = ImageTk.PhotoImage(image_data)
     tk.Label(rate_table_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
     tk.Label(customer_entitlements_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
-    tk.Label(existing_customer_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")    
+    tk.Label(existing_customer_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")
+    tk.Label(reporting_tab, image=logo_image).place(relx=0.95, y=10, anchor="ne")    
 
+############################################################################################################
+# Reporting Tab
+############################################################################################################
+# reporting_tab = ttk.Frame(notebook)
+notebook.add(reporting_tab, text="Reporting", padding=5)
+# Add Open Reporter button
+reporting_frame = ttk.Frame(reporting_tab)
+reporting_frame.pack(expand=True, fill="both")
+
+# Load and display Reporting Icon
+report_image_path = r"./static/Reporter_icon.png"
+report_image = Image.open(report_image_path)
+# report_image = report_image.resize((350, 187), Image.Resampling.LANCZOS)
+report_image = ImageTk.PhotoImage(report_image)
+
+report_label = tk.Label(reporting_frame, image=report_image, cursor="hand2")
+report_label.image = report_image  # Keep a reference to avoid garbage collection
+report_label.pack(pady=70)#side="left", padx=10)
+
+reporting_button = Button(reporting_frame, text="Open Reporting Dashboard", command=start_reporting)
+reporting_button.pack()#side="left", padx=10)
 # Start the main event loop
 # Start the main application
 if __name__ == "__main__":

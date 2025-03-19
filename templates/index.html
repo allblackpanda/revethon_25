@@ -85,7 +85,15 @@
             <div class="row">
                 <div class="col-md-9">
                     <div class="mt-4" style="height: 500px;">
-                        <h3 class="text-center">Requests Over Time</h3>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h3 class="mb-0">Requests Over Time</h3>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="rollingAverageToggle" checked onchange="toggleChartView()">
+                                <label class="form-check-label" for="rollingAverageToggle" id="rollingAverageLabel">
+                                    Daily Average View
+                                </label>
+                            </div>
+                        </div>
                         <canvas id="usageChart"></canvas>
                     </div>
                 </div>
@@ -378,8 +386,7 @@
         }
 
         function filterAndUpdateCharts() {
-            const selectedAccount = document.getElementById('account-dropdown').value;
-            
+            const selectedAccount = document.getElementById('account-dropdown').value;   
             // First filter by account
             let filteredData = allData.filter(item => item.accountId === selectedAccount);
             
@@ -392,6 +399,9 @@
             generateUsageChart(filteredData);
             generateSummaryChart(filteredData);
             generateDenialChart(filteredData);
+            
+            // Update the toggle button label based on the current state
+            updateToggleButtonLabel();
         }
 
         function displayNoDataMessage() {
@@ -433,6 +443,61 @@
             }
         }
 
+        // Add this function to aggregate data by day
+        function aggregateDataByDay(data) {
+            const dailyData = {};
+            const allDatesSet = new Set();
+
+            // Group data by day
+            data.forEach(item => {
+                const date = item.usageTime.split(' ')[0];
+                allDatesSet.add(date);
+
+                if (!dailyData[date]) {
+                    dailyData[date] = {
+                        totalUsage: 0,
+                        count: 0
+                    };
+                }
+
+                dailyData[date].totalUsage += item.used;
+                dailyData[date].count++;
+            });
+
+            // Determine full date range (start to end)
+            const allDatesArray = Array.from(allDatesSet).sort((a, b) => new Date(a) - new Date(b));
+            const startDate = new Date(allDatesArray[0]);
+            const endDate = new Date(allDatesArray[allDatesArray.length - 1]);
+
+            const completeDates = [];
+            let currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                completeDates.push(dateStr);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Create final array including missing dates with zero usage
+            const aggregatedData = completeDates.map(date => {
+                if (dailyData[date]) {
+                    return {
+                        usageTime: date,
+                        used: dailyData[date].totalUsage / dailyData[date].count,
+                        count: dailyData[date].count
+                    };
+                } else {
+                    return {
+                        usageTime: date,
+                        used: 0,
+                        count: 0
+                    };
+                }
+            });
+
+            return aggregatedData;
+        }
+        
+        // Update the generateUsageChart function to support both views
         function generateUsageChart(data) {
             const ctx = document.getElementById('usageChart').getContext('2d');
             
@@ -444,6 +509,17 @@
             
             ctx.canvas.style.opacity = "1"; // Restore visibility if data exists
             
+            // Check if we should use rolling average (daily) or detailed view
+            const useRollingAverage = document.getElementById('rollingAverageToggle').checked;
+            
+            let chartData = data;
+            let tooltipLabel = 'Usage';
+            
+            if (useRollingAverage) {
+                chartData = aggregateDataByDay(data);
+                tooltipLabel = 'Daily Average Usage';
+            }
+            
             if (chartInstance) {
                 chartInstance.destroy();
             }
@@ -453,14 +529,14 @@
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.map(item => item.usageTime),
+                    labels: chartData.map(item => item.usageTime),
                     datasets: [{
-                        label: 'Usage Over Time',
-                        data: data.map(item => item.used),
+                        label: useRollingAverage ? 'Daily Average Usage' : 'Usage Over Time',
+                        data: chartData.map(item => item.used),
                         borderColor: colors.line.border,
                         backgroundColor: colors.line.background,
                         borderWidth: 2,
-                        pointRadius: 3
+                        pointRadius: useRollingAverage ? 5 : 3 // Larger points for daily view
                     }]
                 },
                 options: {
@@ -468,12 +544,20 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: { 
-                            title: { display: true, text: 'Time', color: colors.text },
+                            title: { 
+                                display: true, 
+                                text: useRollingAverage ? 'Date' : 'Time', 
+                                color: colors.text 
+                            },
                             grid: { color: colors.grid },
                             ticks: { color: colors.text }
                         },
                         y: { 
-                            title: { display: true, text: 'Usage', color: colors.text },
+                            title: { 
+                                display: true, 
+                                text: 'Usage', 
+                                color: colors.text 
+                            },
                             grid: { color: colors.grid },
                             ticks: { color: colors.text }
                         }
@@ -483,12 +567,22 @@
                             labels: {
                                 color: colors.text
                             }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (useRollingAverage) {
+                                        const dataPoint = chartData[context.dataIndex];
+                                        return `${tooltipLabel}: ${context.parsed.y.toFixed(2)} (${dataPoint.count} data points)`;
+                                    }
+                                    return `${tooltipLabel}: ${context.parsed.y}`;
+                                }
+                            }
                         }
                     }
                 }
             });
         }
-
 
         function generateSummaryChart(data) {
             const ctx = document.getElementById('summaryChart').getContext('2d');
@@ -689,6 +783,32 @@
             link.click();
             document.body.removeChild(link);
         });
+        
+        // Add this function to update the toggle button label
+        function updateToggleButtonLabel() {
+            const toggleButton = document.getElementById('rollingAverageToggle');
+            const toggleLabel = document.getElementById('rollingAverageLabel');
+            
+            if (toggleButton.checked) {
+                toggleLabel.textContent = "Daily Average View";
+            } else {
+                toggleLabel.textContent = "Detailed View";
+            }
+        }
+
+        // Add this function to handle the toggle button click
+        function toggleChartView() {
+            // Just regenerate the chart with the current data
+            const selectedAccount = document.getElementById('account-dropdown').value;
+            let filteredData = allData.filter(item => item.accountId === selectedAccount);
+            
+            if (selectedConsumers.length > 0 && selectedConsumers.length < uniqueConsumers.length) {
+                filteredData = filteredData.filter(item => selectedConsumers.includes(item.consumerId));
+            }
+            
+            generateUsageChart(filteredData);
+            updateToggleButtonLabel();
+        }
     </script>
 </body>
 </html>
