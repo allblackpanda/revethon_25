@@ -82,12 +82,35 @@
                 </div>
             </div>
             
-            <div class="mt-4" style="height: 500px;">
-                <h3 class="text-center">Usage over Time</h3>
-                <canvas id="usageChart"></canvas>
+            <div class="row">
+                <div class="col-md-9">
+                    <div class="mt-4" style="height: 500px;">
+                        <h3 class="text-center">Requests Over Time</h3>
+                        <canvas id="usageChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card mt-4" style="height: 500px;">
+                        <div class="card-header">
+                            <h5 class="mb-0">Contributing Consumers</h5>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="selectAllConsumers" checked>
+                                <label class="form-check-label" for="selectAllConsumers">
+                                    Select All
+                                </label>
+                            </div>
+                        </div>
+                        <div class="card-body overflow-auto" id="consumerCheckboxes">
+                            <!-- Consumer checkboxes will be dynamically added here -->
+                            <div class="text-center text-muted py-5">
+                                <i class="bi bi-person-x"></i>
+                                <p>No consumers found</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
     </div>
 
     <button id="exportButton" class="btn btn-secondary" style="position: fixed; bottom: 20px; left: 20px;">Export</button>
@@ -140,6 +163,8 @@
         let denialChartInstance = null;
         let allData = [];
         let currentTheme = 'light';
+        let selectedConsumers = [];
+        let uniqueConsumers = [];
         const responseCodes = {
             "306": "Insufficient elastic tokens available",
             "101": "Successful item checkout",
@@ -158,8 +183,31 @@
             }
         }
 
-        // Initialize theme when page loads
-        document.addEventListener('DOMContentLoaded', initTheme);
+        // Initialize theme and set up event listeners when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
+            
+            document.getElementById('selectAllConsumers').addEventListener('change', function() {
+                const consumerCheckboxes = document.querySelectorAll('.consumer-checkbox');
+                
+                if (this.checked) {
+                    // Select all consumers
+                    selectedConsumers = [...uniqueConsumers];
+                    consumerCheckboxes.forEach(checkbox => {
+                        checkbox.checked = true;
+                    });
+                } else {
+                    // Deselect all consumers
+                    selectedConsumers = [];
+                    consumerCheckboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                }
+                
+                // Update charts
+                filterAndUpdateCharts();
+            });
+        });
 
         function toggleDarkMode() {
             const isDarkMode = document.getElementById('darkModeSwitch').checked;
@@ -184,6 +232,76 @@
                 generateSummaryChart(data);
                 generateDenialChart(data);
             }
+        }
+
+        function updateConsumersList(data) {
+            // Extract unique consumer IDs
+            uniqueConsumers = [...new Set(data.map(item => item.consumerId))].filter(Boolean).sort();
+            
+            const consumerContainer = document.getElementById('consumerCheckboxes');
+            const selectAllCheckbox = document.getElementById('selectAllConsumers');
+            
+            // Clear previous checkboxes
+            consumerContainer.innerHTML = '';
+            
+            if (uniqueConsumers.length === 0) {
+                consumerContainer.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-person-x"></i>
+                        <p>No consumers found</p>
+                    </div>`;
+                selectAllCheckbox.disabled = true;
+                return;
+            }
+            
+            selectAllCheckbox.disabled = false;
+            
+            // Default to all consumers selected on initial load
+            if (selectedConsumers.length === 0) {
+                selectedConsumers = [...uniqueConsumers];
+            } else {
+                // Retain only valid selections when refreshing
+                selectedConsumers = selectedConsumers.filter(id => uniqueConsumers.includes(id));
+                if (selectedConsumers.length === 0 && uniqueConsumers.length > 0) {
+                    selectedConsumers = [...uniqueConsumers];
+                }
+            }
+            
+            // Update "Select All" checkbox state
+            selectAllCheckbox.checked = selectedConsumers.length === uniqueConsumers.length;
+            
+            // Create checkboxes for each unique consumer
+            uniqueConsumers.forEach(consumerId => {
+                const isChecked = selectedConsumers.includes(consumerId);
+                const checkboxId = `consumer-${consumerId.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                
+                const checkboxDiv = document.createElement('div');
+                checkboxDiv.className = 'form-check mb-2';
+                checkboxDiv.innerHTML = `
+                    <input class="form-check-input consumer-checkbox" type="checkbox" id="${checkboxId}" 
+                        ${isChecked ? 'checked' : ''} value="${consumerId}">
+                    <label class="form-check-label text-truncate" for="${checkboxId}" title="${consumerId}">
+                        ${consumerId}
+                    </label>
+                `;
+                
+                consumerContainer.appendChild(checkboxDiv);
+                
+                // Add event listener to the checkbox
+                document.getElementById(checkboxId).addEventListener('change', function() {
+                    if (this.checked) {
+                        selectedConsumers.push(consumerId);
+                    } else {
+                        selectedConsumers = selectedConsumers.filter(id => id !== consumerId);
+                    }
+                    
+                    // Update "Select All" checkbox
+                    selectAllCheckbox.checked = selectedConsumers.length === uniqueConsumers.length;
+                    
+                    // Refresh charts with filtered data
+                    filterAndUpdateCharts();
+                });
+            });
         }
 
         function setLoading(isLoading) {
@@ -233,6 +351,8 @@
                 if (allData.length === 0) {
                     displayNoDataMessage();
                 } else {
+                    // Reset consumer selection when fetching new data
+                    selectedConsumers = [];
                     filterChartData();
                 }
             })
@@ -246,10 +366,29 @@
             });
         }
 
-
         function filterChartData() {
             const selectedAccount = document.getElementById('account-dropdown').value;
-            const filteredData = allData.filter(item => item.accountId === selectedAccount);
+            const filteredByAccount = allData.filter(item => item.accountId === selectedAccount);
+            
+            // Update consumer list with account-filtered data
+            updateConsumersList(filteredByAccount);
+            
+            // Further filter by selected consumers
+            filterAndUpdateCharts();
+        }
+
+        function filterAndUpdateCharts() {
+            const selectedAccount = document.getElementById('account-dropdown').value;
+            
+            // First filter by account
+            let filteredData = allData.filter(item => item.accountId === selectedAccount);
+            
+            // Then filter by selected consumers if any are selected
+            if (selectedConsumers.length > 0 && selectedConsumers.length < uniqueConsumers.length) {
+                filteredData = filteredData.filter(item => selectedConsumers.includes(item.consumerId));
+            }
+            
+            // Update all charts with the filtered data
             generateUsageChart(filteredData);
             generateSummaryChart(filteredData);
             generateDenialChart(filteredData);
@@ -518,15 +657,23 @@
             const confirmExport = confirm("Do you want to export the data as a CSV file?");
             if (!confirmExport) return;
             
-            const filteredData = allData.filter(item => item.accountId === selectedAccount);
-            if (filteredData.length === 0) {
+            // Filter data by account and selected consumers
+            let dataToExport = allData.filter(item => item.accountId === selectedAccount);
+            
+            // Further filter by selected consumers if not all are selected
+            if (selectedConsumers.length > 0 && selectedConsumers.length < uniqueConsumers.length) {
+                dataToExport = dataToExport.filter(item => selectedConsumers.includes(item.consumerId));
+            }
+            
+            if (dataToExport.length === 0) {
                 alert("No data available for export.");
                 return;
             }
             
             let csvContent = "data:text/csv;charset=utf-8,";
             csvContent += "Correlation ID,Usage Time,Write Time,Account ID,Consumer ID,Consumer Type,Meter,Meter Type,Meter Cost,Meter Quantity,Item,Item Version,Item Quantity,Activation ID,Instance ID,Mapped Entitled Count,Tokens Used,Session ID,Session State,Request Response Code,Overdraft Count\n";
-            filteredData.forEach(item => {
+            
+            dataToExport.forEach(item => {
                 // Replace empty values with "N/A"
                 const safeValue = (val) => (val === undefined || val === null || val === '') ? 'N/A' : val;
                 
