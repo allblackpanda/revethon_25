@@ -307,7 +307,6 @@ def get_rate_tables(filtered=False):
 
                     series_text_area.config(state="disabled")
 
-
             def copy_to_main():
                 """Copies the selected rate table series to the main text area and makes it editable."""
                 text_data = series_text_area.get("1.0", "end").strip()  
@@ -446,7 +445,6 @@ def increment_version():
     main_text_area.config(state="normal")
     result_label.config(text="Series Version incremented successfully")
 
-
 def rate_table_start_date():
     """Opens a date picker dialog to select a start date for the rate table."""
     date_picker = DatePickerDialog()
@@ -491,7 +489,6 @@ def rate_table_start_date():
 
         main_text_area.config(state="normal")
         result_label.config(text="Start Date updated Successfully")
-
 
 def post_to_site():
     """Posts the current contents of the Main UI to the configured site and writes it to a file."""
@@ -580,7 +577,6 @@ def register_customer():
     url = build_base_url() + "/instances"
     headers = build_api_headers()
 
-
     payload = {
         "shortName": customer_name,
         "accountId": customer_id
@@ -605,7 +601,6 @@ def register_customer():
                     return customer_instance_id
                 else:
                     return 0 #Zero means customer exists
-
 
         response = requests.post(url, headers=headers, json=payload)
 
@@ -744,8 +739,6 @@ def tab_selected_changed(event):
             get_customer_line_items()
         else:
             selected_account_var.set("")  # Clear selection if no customers exist
-    # elif notebook.select() == notebook.tabs()[3]: # Reporting tab
-    #     start_reporting()
 
 def on_env_change():
     """Reload customer names and refresh rate table dropdown when the environment selection changes."""
@@ -924,7 +917,6 @@ def edit_line_item():
     edit_start_date_label.grid(row=3, column=1, padx=22)
     edit_start_date_btn = ttk.Button(edit_start_date_frame, text="Pick Date", command=lambda: open_calendar(edit_start_date_label,edit_start_date_label))
     edit_start_date_btn.grid(row=3, column=2, padx=10)
-
 
     # End Date
     old_end_date = item_values[1]
@@ -1211,8 +1203,6 @@ def send_email(to_address, subject, original_item, customer_id):
     except Exception as e:
         messagebox.showerror("Error", f"An unexpected error occurred: {str(e)}")
 
-
-
 def email_line_item():
     """Prompt the user to enter an email address and send the selected line item."""
     selected_item = line_items_table.selection()
@@ -1278,6 +1268,7 @@ atexit.register(quit_application)
 ############################################################################################################
 config = read_config()
 initialize_reporter() # Start the reporter
+
 # Create the main application window
 root = ttkb.Window(themename=config.get("theme", "cosmo"))
 root.title("FlexNet EAST (Elastic Access Standalone Tool)")
@@ -1288,7 +1279,6 @@ screen_width, screen_height = root.winfo_screenwidth(), root.winfo_screenheight(
 x, y = (screen_width - window_width) // 2, (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
 root.iconbitmap(ICON)  
-
 
 # Create a Notebook (Tabbed Interface)
 notebook = ttk.Notebook(root)
@@ -1318,7 +1308,6 @@ notebook.add(resources_tab, text="Additional Resources", padding=5)
 # Resources Tab
 ############################################################################################################
 # Add content to the "Resources" tab
-
 resources_label = ttk.Label(resources_tab, text="Additional Resources", font=("Arial", 14, "bold"))
 resources_label.pack(pady=10, padx=10, anchor="nw")  # Anchor to the top-left
 
@@ -1392,7 +1381,6 @@ third_caption_label.pack(side="left", padx=10)
 # UI Components for "Rate Table Generator" tab
 env_var = tk.StringVar(value=UAT_OPTION)
 
-
 ############################################################################################################
 # Manage Rate Table Tab
 ############################################################################################################
@@ -1422,8 +1410,6 @@ post_site_button.place(x=10, y=320)
 
 clear_editor_button = ttk.Button(rate_table_tab, text="Clear Editor", command=clear_editor, padding=(5, 7), width=button_width, state=tk.DISABLED)
 clear_editor_button.place(x=config.get('clear_edit_button_x',875), y=120)
-
-
 
 # Text Area for Rate Table
 main_text_area = Text(rate_table_tab, wrap="word", height=20, width=config.get('rate_table_editor_width', 70))
@@ -1509,7 +1495,6 @@ exit_button4 = ttk.Button(bottom_frame_reporter_tab, text="Exit", command=quit_a
 exit_button4.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
 exit_button4 = ttk.Button(bottom_frame_resources_tab, text="Exit", command=quit_application, padding=(20, 5))
 exit_button4.pack(side="right", padx=10, pady=5)  # Aligns it to the bottom-right
-
 
 ############################################################################################################
 # New Customer Registation Tab
@@ -1598,7 +1583,6 @@ generate_button.pack(padx=10, pady=70)
 map_label = ttk.Label(create_frame, text="", wraplength=400)
 map_label.pack()
 
-
 ############################################################################################################
 # Existing Customer Entitlements Tab
 ############################################################################################################
@@ -1670,15 +1654,6 @@ delete_button = Button(
             )
 delete_button.pack(side="left", padx=10)
 
-# Add Reporting button 
-# reporting_button = Button(
-#             button_frame, 
-#             text="Reporting", 
-#             command=start_reporting,
-#             bootstyle="info"
-#             )
-# reporting_button.pack(side="left", padx=10)
-
 # Add customer ID label to the right of the Delete Line Item button
 customer_id_label = ttk.Label(button_frame, text="Instance ID: ", font=("Arial", 10, "normal"))
 customer_id_label.pack(side="left", padx=20)
@@ -1693,7 +1668,6 @@ def copy_to_clipboard():
 copy_button = ttk.Button(button_frame, text="Copy", command=copy_to_clipboard, width=7)
 copy_button.pack(side="right", padx=10)
 
-
 # Fetch and display logo
 response = requests.get(config['logo_url'])
 if response.status_code == 200:
@@ -1707,7 +1681,6 @@ if response.status_code == 200:
 ############################################################################################################
 # Reporting Tab
 ############################################################################################################
-# reporting_tab = ttk.Frame(notebook)
 notebook.add(reporting_tab, text="Reporting", padding=5)
 # Add Open Reporter button
 reporting_frame = ttk.Frame(reporting_tab)
@@ -1716,16 +1689,15 @@ reporting_frame.pack(expand=True, fill="both")
 # Load and display Reporting Icon
 report_image_path = r"./static/Reporter_icon.png"
 report_image = Image.open(report_image_path)
-# report_image = report_image.resize((350, 187), Image.Resampling.LANCZOS)
 report_image = ImageTk.PhotoImage(report_image)
 
 report_label = tk.Label(reporting_frame, image=report_image, cursor="hand2")
 report_label.image = report_image  # Keep a reference to avoid garbage collection
-report_label.pack(pady=70)#side="left", padx=10)
+report_label.pack(pady=70)
 
 reporting_button = Button(reporting_frame, text="Open Reporting Dashboard", command=start_reporting)
-reporting_button.pack()#side="left", padx=10)
-# Start the main event loop
+reporting_button.pack()
+
 # Start the main application
 if __name__ == "__main__":
     logging.info("Application started.")
