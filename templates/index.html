@@ -638,7 +638,8 @@
                             title: { 
                                 display: true, 
                                 text: useRollingAverage ? 'Date' : 'Time', 
-                                color: colors.text 
+                                color: colors.text,
+                                font: { weight: 'bold' }  
                             },
                             grid: { color: colors.grid },
                             ticks: { color: colors.text }
@@ -647,7 +648,8 @@
                             title: { 
                                 display: true, 
                                 text: 'Usage', 
-                                color: colors.text 
+                                color: colors.text,
+                                font: { weight: 'bold' }  
                             },
                             grid: { color: colors.grid },
                             ticks: { color: colors.text }
@@ -729,12 +731,12 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: { 
-                            title: { display: true, text: 'Item - Item Version', color: colors.text },
+                            title: { display: true, text: 'Item - Item Version', color: colors.text, font: { weight: 'bold' }  },
                             grid: { color: colors.grid },
                             ticks: { color: colors.text }
                         },
                         y: { 
-                            title: { display: true, text: 'Meter Quantity', color: colors.text },
+                            title: { display: true, text: 'Meter Quantity', color: colors.text, font: { weight: 'bold' }  },
                             grid: { color: colors.grid },
                             ticks: { color: colors.text }
                         }
