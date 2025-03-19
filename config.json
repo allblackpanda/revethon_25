@@ -21,7 +21,7 @@
         "theme": "darkly",
         "port": 5070,
         "main_window_width": 1300,
-        "main_window_height": 800,
+        "main_window_height":900,
         "accountid_exclude_uat": ["Cust-ID","test","{CUST","Zerox","A123","Cust_id","Daniel_"],
         "accountid_exclude_prod": ["ACME Elastic Customer"],
         "rate_table_editor_width": 50,
